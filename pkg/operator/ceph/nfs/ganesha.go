@@ -154,7 +154,8 @@ func (c *GaneshaController) makeDeployment(n cephv1alpha1.NFSGanesha) *extension
 		Spec: podSpec,
 	}
 
-	replicas := int32(n.Spec.Server.Active)
+	// Multiple replicas of the ganesha service would be handled by creating a service and a new deployment for each one, rather than increasing the pod count here
+	replicas := int32(1)
 	deployment.Spec = extensions.DeploymentSpec{Template: podTemplateSpec, Replicas: &replicas}
 	return deployment
 }
