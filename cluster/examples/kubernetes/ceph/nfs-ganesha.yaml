@@ -1,0 +1,39 @@
+apiVersion: ceph.rook.io/v1alpha1
+kind: NFSGanesha
+metadata:
+  name: my-nfs
+  namespace: rook-ceph
+spec:
+  export:
+    # RADOS pool where Ganesha exports and NFS client recovery data is stored.
+    pool: myfs-data0
+    # RADOS object in the pool that has the Ganesha exports
+    object: ganesha-export
+  server:
+    # the number of active ganesha servers
+    active: 1
+    # where to run the nfs ganesha server
+    placement:
+    #  nodeAffinity:
+    #    requiredDuringSchedulingIgnoredDuringExecution:
+    #      nodeSelectorTerms:
+    #      - matchExpressions:
+    #        - key: role
+    #          operator: In
+    #          values:
+    #          - mds-node
+    #  tolerations:
+    #  - key: mds-node
+    #    operator: Exists
+    #  podAffinity:
+    #  podAntiAffinity:
+    # The requests and limits set here allow the ganesha pod(s) to use half of one CPU core and 1 gigabyte of memory
+    resources:
+    #  limits:
+    #    cpu: "500m"
+    #    memory: "1024Mi"
+    #  requests:
+    #    cpu: "500m"
+    #    memory: "1024Mi"
+
+  

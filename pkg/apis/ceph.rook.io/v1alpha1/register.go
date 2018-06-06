@@ -61,6 +61,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&FilesystemList{},
 		&ObjectStore{},
 		&ObjectStoreList{},
+		&NFSGanesha{},
+		&NFSGaneshaList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

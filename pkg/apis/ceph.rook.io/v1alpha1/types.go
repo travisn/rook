@@ -240,9 +240,55 @@ type GatewaySpec struct {
 	// The name of the secret that stores the ssl certificate for secure rgw connections
 	SSLCertificateRef string `json:"sslCertificateRef"`
 
-	// The affinity to place the rgw pods (default is to place on any available node)
+	// The affinity to place the rgw pods
 	Placement rook.Placement `json:"placement"`
 
 	// The resource requirements for the rgw pods
 	Resources v1.ResourceRequirements `json:"resources"`
+}
+
+// +genclient
+// +genclient:noStatus
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type NFSGanesha struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata"`
+	Spec              NFSGaneshaSpec `json:"spec"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type NFSGaneshaList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []NFSGanesha `json:"items"`
+}
+
+// NFSGaneshaSpec represents the spec of an nfs ganesha server
+type NFSGaneshaSpec struct {
+	// The metadata pool settings
+	Server GaneshaServerSpec `json:"server"`
+
+	// The data pool settings
+	Export GaneshaExportSpec `json:"export"`
+}
+
+type GaneshaServerSpec struct {
+	// The number of active Ganesha servers
+	Active int `json:"active"`
+
+	// The affinity to place the ganesha pods
+	Placement rook.Placement `json:"placement"`
+
+	// Resources set resource requests and limits
+	Resources v1.ResourceRequirements `json:"resources,omitempty"`
+}
+
+type GaneshaExportSpec struct {
+	// The name of the RADOS pool where the exports are stored
+	Pool string `json:"pool"`
+
+	// The name of the RADOS object where the exports are stored in the pool
+	Object string `json:"object"`
 }
