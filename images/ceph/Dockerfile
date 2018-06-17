@@ -15,8 +15,13 @@
 FROM BASEIMAGE
 
 RUN yum --assumeyes install \
+    yum-plugin-copr \
     net-tools \
     nmap-ncat && \
+    yum --assumeyes copr enable jlayton/ceph && \
+    yum --assumeyes copr enable jlayton/nfs-ganesha && \
+    yum --assumeyes update libcephfs2 librados2 libntirpc nfs-ganesha-ceph nfs-ganesha-rgw nfs-ganesha && \
+    yum --assumeyes install nfs-ganesha-rados-grace && \
     yum clean all && rm -rf /tmp/* /var/tmp/*
 
 ARG ARCH
