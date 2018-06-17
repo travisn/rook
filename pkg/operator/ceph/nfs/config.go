@@ -37,9 +37,7 @@ NFS_CORE_PARAM {
 }
 
 CACHEINODE {
-	Dir_Max = 1;
 	Dir_Chunk = 0;
-	Cache_FDs = false;
 	NParts = 1;
 	Cache_Size = 1;
 }
@@ -48,13 +46,9 @@ EXPORT_DEFAULTS {
 	Attr_Expiration_Time = 0;
 }
 
-RADOS_URLS {
-	ceph_conf = '` + cephConfigPath + `';
-	userid = '` + userID + `';
-}
-
 NFSv4 {
-	RecoveryBackend = 'rados_kv';
+	Delegations = false;
+	RecoveryBackend = 'rados_cluster';
 	Minor_Versions = 1, 2;
 }
 
@@ -77,8 +71,6 @@ EXPORT
 	Export_ID=100;
 	Protocols = 4;
 	Transports = TCP;
-	Attr_Expiration_Time = 0;
-	Delegations = R;
 	Path = ` + export.Path + `;
 	Pseudo = ` + getPseudoPathWithDefault(export) + `;
 	Squash = ` + getRootSquashWithDefault(export.Squash) + `;
