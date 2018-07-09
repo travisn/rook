@@ -32,8 +32,9 @@ import (
 )
 
 const (
-	appName     = "rook-ceph-ganesha"
-	ganeshaPort = 2049
+	appName             = "rook-ceph-ganesha"
+	ganeshaConfigVolume = "ganesha-config"
+	ganeshaPort         = 2049
 )
 
 // Create the ganesha server
@@ -43,6 +44,10 @@ func (c *GaneshaController) createGanesha(n cephv1alpha1.NFSGanesha) error {
 	}
 
 	logger.Infof("start running ganesha %s", n.Name)
+
+	if err := c.generateConfig(n); err != nil {
+		return fmt.Errorf("failed to create config. %+v", err)
+	}
 
 	// start the deployment
 	deployment := c.makeDeployment(n)
@@ -62,6 +67,49 @@ func (c *GaneshaController) createGanesha(n cephv1alpha1.NFSGanesha) error {
 		return fmt.Errorf("failed to create ganesha service. %+v", err)
 	}
 
+	return nil
+}
+
+func (c *GaneshaController) generateConfig(n cephv1alpha1.NFSGanesha) error {
+	// TODO: Include export settings from the CRD
+	config := `EXPORT
+	{
+			Export_ID=100;
+			Protocols = 4;
+			Transports = TCP;
+			Path = /;
+			Pseudo = /cephfs/;
+			Access_Type = RW;
+			Attr_Expiration_Time = 0;
+			Delegations = R;
+			Squash = No_root_squash;
+			FSAL {
+					Name = CEPH;
+			}
+	}`
+
+	data := map[string]string{
+		"config": config,
+	}
+	configMap := &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      instanceName(n),
+			Namespace: n.Namespace,
+			Labels: map[string]string{
+				k8sutil.AppAttr: appName,
+			},
+		},
+		Data: data,
+	}
+	if _, err := c.context.Clientset.CoreV1().ConfigMaps(n.Namespace).Create(configMap); err != nil {
+		if errors.IsAlreadyExists(err) {
+			if _, err := c.context.Clientset.CoreV1().ConfigMaps(n.Namespace).Update(configMap); err != nil {
+				return fmt.Errorf("failed to update ganesha config. %+v", err)
+			}
+			return nil
+		}
+		return fmt.Errorf("failed to create ganesha config. %+v", err)
+	}
 	return nil
 }
 
@@ -130,12 +178,17 @@ func (c *GaneshaController) makeDeployment(n cephv1alpha1.NFSGanesha) *extension
 			OwnerReferences: []metav1.OwnerReference{c.ownerRef},
 		},
 	}
+	configMapSource := &v1.ConfigMapVolumeSource{
+		LocalObjectReference: v1.LocalObjectReference{Name: instanceName(n)},
+		Items:                []v1.KeyToPath{{Key: "config", Path: "export.conf"}},
+	}
 
 	podSpec := v1.PodSpec{
 		Containers:    []v1.Container{c.ganeshaContainer(n)},
 		RestartPolicy: v1.RestartPolicyAlways,
 		Volumes: []v1.Volume{
 			{Name: k8sutil.DataDirVolume, VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}}},
+			{Name: ganeshaConfigVolume, VolumeSource: v1.VolumeSource{ConfigMap: configMapSource}},
 			k8sutil.ConfigOverrideVolume(),
 		},
 		HostNetwork: c.hostNetwork,
@@ -171,12 +224,11 @@ func (c *GaneshaController) ganeshaContainer(n cephv1alpha1.NFSGanesha) v1.Conta
 		Image: c.rookImage,
 		VolumeMounts: []v1.VolumeMount{
 			{Name: k8sutil.DataDirVolume, MountPath: k8sutil.DataDir},
+			{Name: ganeshaConfigVolume, MountPath: "/etc/ganesha/config"},
 			k8sutil.ConfigOverrideMount(),
 		},
 		Env: []v1.EnvVar{
 			{Name: "ROOK_POD_NAME", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
-			{Name: "ROOK_NFS_EXPORT_POOL", Value: n.Spec.Export.Pool},
-			{Name: "ROOK_NFS_EXPORT_OBJECT", Value: n.Spec.Export.Object},
 			opmon.ClusterNameEnvVar(n.Namespace),
 			opmon.EndpointEnvVar(),
 			opmon.AdminSecretEnvVar(),

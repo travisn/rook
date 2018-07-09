@@ -5,10 +5,7 @@ metadata:
   namespace: rook-ceph
 spec:
   export:
-    # RADOS pool where Ganesha exports and NFS client recovery data is stored.
-    pool: myfs-data0
-    # RADOS object in the pool that has the Ganesha exports
-    object: ganesha-export
+    # TODO: Properties for the exports
   server:
     # the number of active ganesha servers
     active: 1

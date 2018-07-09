@@ -286,9 +286,5 @@ type GaneshaServerSpec struct {
 }
 
 type GaneshaExportSpec struct {
-	// The name of the RADOS pool where the exports are stored
-	Pool string `json:"pool"`
-
-	// The name of the RADOS object where the exports are stored in the pool
-	Object string `json:"object"`
+	// Add properties about exports
 }

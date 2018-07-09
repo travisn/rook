@@ -35,8 +35,6 @@ var ganeshaCmd = &cobra.Command{
 }
 
 func init() {
-	ganeshaCmd.Flags().StringVar(&exportPool, "nfs-export-pool", "", "name of the pool in which nfs exports are stored")
-	ganeshaCmd.Flags().StringVar(&exportObject, "nfs-export-object", "", "name of the object in which nfs exports are stored in the pool")
 	addCephFlags(ganeshaCmd)
 
 	flags.SetFlagsFromEnv(ganeshaCmd.Flags(), rook.RookEnvVarPrefix)
@@ -45,7 +43,7 @@ func init() {
 }
 
 func startGanesha(cmd *cobra.Command, args []string) error {
-	required := []string{"mon-endpoints", "cluster-name", "admin-secret", "nfs-export-pool", "nfs-export-object", "public-ipv4", "private-ipv4"}
+	required := []string{"mon-endpoints", "cluster-name", "admin-secret", "public-ip", "private-ip"}
 	if err := flags.VerifyRequiredFlags(ganeshaCmd, required); err != nil {
 		return err
 	}

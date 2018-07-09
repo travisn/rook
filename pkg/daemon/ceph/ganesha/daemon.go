@@ -56,7 +56,8 @@ RADOS_URLS {
 ceph_conf = '$(CEPH_CONFIG_PATH)';
 	userid = '$(USER_ID)';
 }
-%url rados://$(EXPORT_POOL)/$(EXPORT_OBJECT)
+# TODO: Replace the rados url with the reference path to /etc/ganesha/ganesha.conf
+#%url rados://mypool/object
 
 NFSv4 {
 RecoveryBackend = 'rados_kv';
@@ -65,7 +66,7 @@ Minor_Versions = 1, 2;
 RADOS_KV {
 ceph_conf = '$(CEPH_CONFIG_PATH)';
 userid = '$(USER_ID)';
-pool = '$(EXPORT_POOL)';
+#pool = 'mypool';
 }
 `
 )
@@ -120,10 +121,16 @@ func generateConfigFiles(context *clusterd.Context, config *Config) error {
 }
 
 func generateGaneshaConfig(config *Config) string {
+	configPath := "/etc/ganesha/config/export.conf"
+	contents, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		logger.Warningf("failed to read file %s. %+v", configPath, err)
+	} else {
+		logger.Infof("config file %s contents:\n%s", configPath, string(contents))
+	}
+
 	// Replace the placeholder settings in the ganesh config
 	r := strings.NewReplacer(
-		"$(EXPORT_POOL)", config.Pool,
-		"$(EXPORT_OBJECT)", config.Object,
 		"$(USER_ID)", "admin",
 		"$(CEPH_CONFIG_PATH)", cephConfigPath)
 	return r.Replace(ganeshaConfig)
@@ -136,7 +143,8 @@ func startGanesha(context *clusterd.Context, config *Config) error {
 	}
 
 	logger.Infof("starting ganesha from pool %s and object %s", config.Pool, config.Object)
-	if err := context.Executor.ExecuteCommand(false, "", "ganesha.nfsd", "-L", "STDOUT", "-N", "NIV_DEBUG"); err != nil {
+	// For debug logging, add the params: "-N", "NIV_DEBUG"
+	if err := context.Executor.ExecuteCommand(false, "", "ganesha.nfsd", "-F", "-L", "STDOUT"); err != nil {
 		return fmt.Errorf("failed to start ganesha. %+v", err)
 	}
 
