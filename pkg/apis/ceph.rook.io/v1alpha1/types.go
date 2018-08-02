@@ -278,6 +278,9 @@ type GaneshaServerSpec struct {
 	// The number of active Ganesha servers
 	Active int `json:"active"`
 
+	// The name of the pool where the grace db is stored
+	Pool string `json:"pool"`
+
 	// The affinity to place the ganesha pods
 	Placement rook.Placement `json:"placement"`
 

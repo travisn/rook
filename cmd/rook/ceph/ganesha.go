@@ -24,8 +24,7 @@ import (
 )
 
 var (
-	exportPool   string
-	exportObject string
+	ganeshaName string
 )
 
 var ganeshaCmd = &cobra.Command{
@@ -35,6 +34,7 @@ var ganeshaCmd = &cobra.Command{
 }
 
 func init() {
+	ganeshaCmd.Flags().StringVar(&ganeshaName, "ganesha-name", "", "name of the ganesha server")
 	addCephFlags(ganeshaCmd)
 
 	flags.SetFlagsFromEnv(ganeshaCmd.Flags(), rook.RookEnvVarPrefix)
@@ -43,7 +43,7 @@ func init() {
 }
 
 func startGanesha(cmd *cobra.Command, args []string) error {
-	required := []string{"mon-endpoints", "cluster-name", "admin-secret", "public-ip", "private-ip"}
+	required := []string{"ganesha-name", "mon-endpoints", "cluster-name", "admin-secret", "public-ip", "private-ip"}
 	if err := flags.VerifyRequiredFlags(ganeshaCmd, required); err != nil {
 		return err
 	}
@@ -54,8 +54,7 @@ func startGanesha(cmd *cobra.Command, args []string) error {
 
 	clusterInfo.Monitors = mon.ParseMonEndpoints(cfg.monEndpoints)
 	config := &ganesha.Config{
-		Pool:        exportPool,
-		Object:      exportObject,
+		Name:        ganeshaName,
 		ClusterInfo: &clusterInfo,
 	}
 
