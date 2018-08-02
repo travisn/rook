@@ -45,32 +45,51 @@ func (c *GaneshaController) createGanesha(n cephv1alpha1.NFSGanesha) error {
 
 	logger.Infof("start running ganesha %s", n.Name)
 
-	if err := c.generateConfig(n); err != nil {
+	configName, err := c.generateConfig(n)
+	if err != nil {
 		return fmt.Errorf("failed to create config. %+v", err)
 	}
 
-	// start the deployment
-	deployment := c.makeDeployment(n)
-	_, err := c.context.Clientset.ExtensionsV1beta1().Deployments(n.Namespace).Create(deployment)
-	if err != nil {
-		if !errors.IsAlreadyExists(err) {
-			return fmt.Errorf("failed to create mds deployment. %+v", err)
-		}
-		logger.Infof("ganesha deployment %s already exists", deployment.Name)
-	} else {
-		logger.Infof("ganesha deployment %s started", deployment.Name)
-	}
+	for i := 0; i < n.Spec.Server.Active; i++ {
+		name := k8sutil.IndexToName(i)
 
-	// create a service
-	err = c.createGaneshaService(n)
-	if err != nil {
-		return fmt.Errorf("failed to create ganesha service. %+v", err)
+		// start the deployment
+		deployment := c.makeDeployment(n, name, configName)
+		_, err := c.context.Clientset.ExtensionsV1beta1().Deployments(n.Namespace).Create(deployment)
+		if err != nil {
+			if !errors.IsAlreadyExists(err) {
+				return fmt.Errorf("failed to create mds deployment. %+v", err)
+			}
+			logger.Infof("ganesha deployment %s already exists", deployment.Name)
+		} else {
+			logger.Infof("ganesha deployment %s started", deployment.Name)
+		}
+
+		// create a service
+		err = c.createGaneshaService(n, name)
+		if err != nil {
+			return fmt.Errorf("failed to create ganesha service. %+v", err)
+		}
+
+		if err = c.addServerToDatabase(n, name); err != nil {
+			logger.Warningf("Failed to add ganesha server %s to database. It may already be added. %+v", name, err)
+		}
 	}
 
 	return nil
 }
 
-func (c *GaneshaController) generateConfig(n cephv1alpha1.NFSGanesha) error {
+func (c *GaneshaController) addServerToDatabase(n cephv1alpha1.NFSGanesha, name string) error {
+	logger.Infof("Adding ganesha %s to grace db", name)
+	return c.context.Executor.ExecuteCommand(false, "", "ganesha-rados-grace", "--pool", n.Spec.Server.Pool, "add", name)
+}
+
+func (c *GaneshaController) removeServerFromDatabase(n cephv1alpha1.NFSGanesha, name string) error {
+	logger.Infof("Removing ganesha %s from grace db", name)
+	return c.context.Executor.ExecuteCommand(false, "", "ganesha-rados-grace", "--pool", n.Spec.Server.Pool, "remove", name)
+}
+
+func (c *GaneshaController) generateConfig(n cephv1alpha1.NFSGanesha) (string, error) {
 	// TODO: Include export settings from the CRD
 	config := `EXPORT
 	{
@@ -93,7 +112,7 @@ func (c *GaneshaController) generateConfig(n cephv1alpha1.NFSGanesha) error {
 	}
 	configMap := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instanceName(n),
+			Name:      fmt.Sprintf("%s-%s", appName, n.Name),
 			Namespace: n.Namespace,
 			Labels: map[string]string{
 				k8sutil.AppAttr: appName,
@@ -104,20 +123,20 @@ func (c *GaneshaController) generateConfig(n cephv1alpha1.NFSGanesha) error {
 	if _, err := c.context.Clientset.CoreV1().ConfigMaps(n.Namespace).Create(configMap); err != nil {
 		if errors.IsAlreadyExists(err) {
 			if _, err := c.context.Clientset.CoreV1().ConfigMaps(n.Namespace).Update(configMap); err != nil {
-				return fmt.Errorf("failed to update ganesha config. %+v", err)
+				return "", fmt.Errorf("failed to update ganesha config. %+v", err)
 			}
-			return nil
+			return configMap.Name, nil
 		}
-		return fmt.Errorf("failed to create ganesha config. %+v", err)
+		return "", fmt.Errorf("failed to create ganesha config. %+v", err)
 	}
-	return nil
+	return configMap.Name, nil
 }
 
-func (c *GaneshaController) createGaneshaService(n cephv1alpha1.NFSGanesha) error {
-	labels := getLabels(n)
+func (c *GaneshaController) createGaneshaService(n cephv1alpha1.NFSGanesha, name string) error {
+	labels := getLabels(n, name)
 	svc := &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            instanceName(n),
+			Name:            instanceName(n, name),
 			Namespace:       n.Namespace,
 			Labels:          labels,
 			OwnerReferences: []metav1.OwnerReference{c.ownerRef},
@@ -151,40 +170,49 @@ func (c *GaneshaController) createGaneshaService(n cephv1alpha1.NFSGanesha) erro
 	return nil
 }
 
-// Delete the file system
+// Delete the ganesha server
 func (c *GaneshaController) deleteGanesha(n cephv1alpha1.NFSGanesha) error {
-	// Delete the mds deployment
-	k8sutil.DeleteDeployment(c.context.Clientset, n.Namespace, instanceName(n))
+	for i := 0; i < n.Spec.Server.Active; i++ {
+		name := k8sutil.IndexToName(i)
 
-	// Delete the ganesha service
-	options := &metav1.DeleteOptions{}
-	err := c.context.Clientset.CoreV1().Services(n.Namespace).Delete(instanceName(n), options)
-	if err != nil && !errors.IsNotFound(err) {
-		logger.Warningf("failed to delete ganesha service. %+v", err)
+		// Remove from grace db
+		if err := c.removeServerFromDatabase(n, name); err != nil {
+			logger.Warningf("failed to remove server %s from grace db. %+v", name, err)
+		}
+
+		// Delete the mds deployment
+		k8sutil.DeleteDeployment(c.context.Clientset, n.Namespace, instanceName(n, name))
+
+		// Delete the ganesha service
+		options := &metav1.DeleteOptions{}
+		err := c.context.Clientset.CoreV1().Services(n.Namespace).Delete(instanceName(n, name), options)
+		if err != nil && !errors.IsNotFound(err) {
+			logger.Warningf("failed to delete ganesha service. %+v", err)
+		}
 	}
 
 	return nil
 }
 
-func instanceName(n cephv1alpha1.NFSGanesha) string {
-	return fmt.Sprintf("%s-%s", appName, n.Name)
+func instanceName(n cephv1alpha1.NFSGanesha, name string) string {
+	return fmt.Sprintf("%s-%s-%s", appName, n.Name, name)
 }
 
-func (c *GaneshaController) makeDeployment(n cephv1alpha1.NFSGanesha) *extensions.Deployment {
+func (c *GaneshaController) makeDeployment(n cephv1alpha1.NFSGanesha, name, configName string) *extensions.Deployment {
 	deployment := &extensions.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            instanceName(n),
+			Name:            instanceName(n, name),
 			Namespace:       n.Namespace,
 			OwnerReferences: []metav1.OwnerReference{c.ownerRef},
 		},
 	}
 	configMapSource := &v1.ConfigMapVolumeSource{
-		LocalObjectReference: v1.LocalObjectReference{Name: instanceName(n)},
+		LocalObjectReference: v1.LocalObjectReference{Name: configName},
 		Items:                []v1.KeyToPath{{Key: "config", Path: "export.conf"}},
 	}
 
 	podSpec := v1.PodSpec{
-		Containers:    []v1.Container{c.ganeshaContainer(n)},
+		Containers:    []v1.Container{c.ganeshaContainer(n, name)},
 		RestartPolicy: v1.RestartPolicyAlways,
 		Volumes: []v1.Volume{
 			{Name: k8sutil.DataDirVolume, VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}}},
@@ -200,8 +228,8 @@ func (c *GaneshaController) makeDeployment(n cephv1alpha1.NFSGanesha) *extension
 
 	podTemplateSpec := v1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        instanceName(n),
-			Labels:      getLabels(n),
+			Name:        instanceName(n, name),
+			Labels:      getLabels(n, name),
 			Annotations: map[string]string{},
 		},
 		Spec: podSpec,
@@ -213,14 +241,14 @@ func (c *GaneshaController) makeDeployment(n cephv1alpha1.NFSGanesha) *extension
 	return deployment
 }
 
-func (c *GaneshaController) ganeshaContainer(n cephv1alpha1.NFSGanesha) v1.Container {
+func (c *GaneshaController) ganeshaContainer(n cephv1alpha1.NFSGanesha, name string) v1.Container {
 
 	return v1.Container{
 		Args: []string{
 			"ceph",
 			"ganesha",
 		},
-		Name:  instanceName(n),
+		Name:  "nfs-ganesha",
 		Image: c.rookImage,
 		VolumeMounts: []v1.VolumeMount{
 			{Name: k8sutil.DataDirVolume, MountPath: k8sutil.DataDir},
@@ -229,6 +257,7 @@ func (c *GaneshaController) ganeshaContainer(n cephv1alpha1.NFSGanesha) v1.Conta
 		},
 		Env: []v1.EnvVar{
 			{Name: "ROOK_POD_NAME", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
+			{Name: "ROOK_GANESHA_NAME", Value: name},
 			opmon.ClusterNameEnvVar(n.Namespace),
 			opmon.EndpointEnvVar(),
 			opmon.AdminSecretEnvVar(),
@@ -240,11 +269,12 @@ func (c *GaneshaController) ganeshaContainer(n cephv1alpha1.NFSGanesha) v1.Conta
 	}
 }
 
-func getLabels(n cephv1alpha1.NFSGanesha) map[string]string {
+func getLabels(n cephv1alpha1.NFSGanesha, name string) map[string]string {
 	return map[string]string{
 		k8sutil.AppAttr:     appName,
 		k8sutil.ClusterAttr: n.Namespace,
 		"nfs_ganesha":       n.Name,
+		"instance":          name,
 	}
 }
 

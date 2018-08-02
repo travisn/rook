@@ -23,7 +23,7 @@ import (
 )
 
 func TestGenerateConfig(t *testing.T) {
-	cfg := &Config{Pool: "mypool", Object: "myobject"}
+	cfg := &Config{Name: "abc"}
 	result := generateGaneshaConfig(cfg)
 	assert.Equal(t, -1, strings.Index(result, "$("))
 }
