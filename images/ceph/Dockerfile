@@ -15,6 +15,7 @@
 FROM BASEIMAGE
 
 RUN yum --assumeyes install \
+    dbus \
     yum-plugin-copr \
     net-tools \
     nmap-ncat && \

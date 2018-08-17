@@ -73,6 +73,16 @@ func generateConfigFiles(context *clusterd.Context, config *Config) error {
 }
 
 func startGanesha(context *clusterd.Context, config *Config) error {
+	err := os.Mkdir("/run/dbus", 0755)
+	if err != nil {
+		logger.Errorf("Couldn't create /run/dbus: %+v", err)
+	}
+
+	logger.Infof("Starting dbus daemon")
+	if err := context.Executor.ExecuteCommand(false, "", "/usr/bin/dbus-daemon", "--system", "--nopidfile"); err != nil {
+		logger.Errorf("Failed to start dbus daemon: %+v", err)
+	}
+
 	logger.Infof("starting ganesha server %s", config.Name)
 	// For debug logging, add the params: "-N", "NIV_DEBUG"
 	if err := context.Executor.ExecuteCommand(false, "", "ganesha.nfsd", "-F", "-L", "STDOUT"); err != nil {
