@@ -50,7 +50,7 @@ spec:
     - rcnfs
     - nfs
   scope: Namespaced
-  version: v1alpha1
+  version: v1beta1
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
