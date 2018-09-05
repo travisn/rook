@@ -22,7 +22,7 @@ import (
 
 	"github.com/coreos/pkg/capnslog"
 	opkit "github.com/rook/operator-kit"
-	cephv1alpha1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1alpha1"
+	cephv1beta1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1beta1"
 	"github.com/rook/rook/pkg/clusterd"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,10 +40,10 @@ var logger = capnslog.NewPackageLogger("github.com/rook/rook", "op-nfs")
 var NFSGaneshaResource = opkit.CustomResource{
 	Name:    customResourceName,
 	Plural:  customResourceNamePlural,
-	Group:   cephv1alpha1.CustomResourceGroup,
-	Version: cephv1alpha1.Version,
+	Group:   cephv1beta1.CustomResourceGroup,
+	Version: cephv1beta1.Version,
 	Scope:   apiextensionsv1beta1.NamespaceScoped,
-	Kind:    reflect.TypeOf(cephv1alpha1.NFSGanesha{}).Name(),
+	Kind:    reflect.TypeOf(cephv1beta1.NFSGanesha{}).Name(),
 }
 
 // NFSGaneshaController represents a controller for NFS custom resources
@@ -74,14 +74,14 @@ func (c *GaneshaController) StartWatch(namespace string, stopCh chan struct{}) e
 	}
 
 	logger.Infof("start watching filesystem resource in namespace %s", namespace)
-	watcher := opkit.NewWatcher(NFSGaneshaResource, namespace, resourceHandlerFuncs, c.context.RookClientset.CephV1alpha1().RESTClient())
-	go watcher.Watch(&cephv1alpha1.NFSGanesha{}, stopCh)
+	watcher := opkit.NewWatcher(NFSGaneshaResource, namespace, resourceHandlerFuncs, c.context.RookClientset.CephV1beta1().RESTClient())
+	go watcher.Watch(&cephv1beta1.NFSGanesha{}, stopCh)
 
 	return nil
 }
 
 func (c *GaneshaController) onAdd(obj interface{}) {
-	nfsGanesha := obj.(*cephv1alpha1.NFSGanesha).DeepCopy()
+	nfsGanesha := obj.(*cephv1beta1.NFSGanesha).DeepCopy()
 
 	err := c.createGanesha(*nfsGanesha)
 	if err != nil {
@@ -90,8 +90,8 @@ func (c *GaneshaController) onAdd(obj interface{}) {
 }
 
 func (c *GaneshaController) onUpdate(oldObj, newObj interface{}) {
-	oldNFS := oldObj.(*cephv1alpha1.NFSGanesha).DeepCopy()
-	newNFS := newObj.(*cephv1alpha1.NFSGanesha).DeepCopy()
+	oldNFS := oldObj.(*cephv1beta1.NFSGanesha).DeepCopy()
+	newNFS := newObj.(*cephv1beta1.NFSGanesha).DeepCopy()
 
 	if !nfsGaneshaChanged(oldNFS.Spec, newNFS.Spec) {
 		logger.Debugf("nfs ganesha %s not updated", newNFS.Name)
@@ -102,7 +102,7 @@ func (c *GaneshaController) onUpdate(oldObj, newObj interface{}) {
 }
 
 func (c *GaneshaController) onDelete(obj interface{}) {
-	nfsGanesha := obj.(*cephv1alpha1.NFSGanesha).DeepCopy()
+	nfsGanesha := obj.(*cephv1beta1.NFSGanesha).DeepCopy()
 
 	err := c.deleteGanesha(*nfsGanesha)
 	if err != nil {
@@ -110,7 +110,7 @@ func (c *GaneshaController) onDelete(obj interface{}) {
 	}
 }
 
-func nfsGaneshaChanged(oldNFS, newNFS cephv1alpha1.NFSGaneshaSpec) bool {
+func nfsGaneshaChanged(oldNFS, newNFS cephv1beta1.NFSGaneshaSpec) bool {
 	if oldNFS.Server.Active != newNFS.Server.Active {
 		return true
 	}

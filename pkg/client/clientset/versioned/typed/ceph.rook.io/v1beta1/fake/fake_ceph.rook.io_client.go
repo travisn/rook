@@ -36,6 +36,10 @@ func (c *FakeCephV1beta1) Filesystems(namespace string) v1beta1.FilesystemInterf
 	return &FakeFilesystems{c, namespace}
 }
 
+func (c *FakeCephV1beta1) NFSGaneshas(namespace string) v1beta1.NFSGaneshaInterface {
+	return &FakeNFSGaneshas{c, namespace}
+}
+
 func (c *FakeCephV1beta1) ObjectStores(namespace string) v1beta1.ObjectStoreInterface {
 	return &FakeObjectStores{c, namespace}
 }

@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1beta1
 
 import (
-	v1alpha1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1alpha1"
+	v1beta1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1beta1"
 	scheme "github.com/rook/rook/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -33,14 +33,14 @@ type NFSGaneshasGetter interface {
 
 // NFSGaneshaInterface has methods to work with NFSGanesha resources.
 type NFSGaneshaInterface interface {
-	Create(*v1alpha1.NFSGanesha) (*v1alpha1.NFSGanesha, error)
-	Update(*v1alpha1.NFSGanesha) (*v1alpha1.NFSGanesha, error)
+	Create(*v1beta1.NFSGanesha) (*v1beta1.NFSGanesha, error)
+	Update(*v1beta1.NFSGanesha) (*v1beta1.NFSGanesha, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v1alpha1.NFSGanesha, error)
-	List(opts v1.ListOptions) (*v1alpha1.NFSGaneshaList, error)
+	Get(name string, options v1.GetOptions) (*v1beta1.NFSGanesha, error)
+	List(opts v1.ListOptions) (*v1beta1.NFSGaneshaList, error)
 	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.NFSGanesha, err error)
+	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.NFSGanesha, err error)
 	NFSGaneshaExpansion
 }
 
@@ -51,7 +51,7 @@ type nFSGaneshas struct {
 }
 
 // newNFSGaneshas returns a NFSGaneshas
-func newNFSGaneshas(c *CephV1alpha1Client, namespace string) *nFSGaneshas {
+func newNFSGaneshas(c *CephV1beta1Client, namespace string) *nFSGaneshas {
 	return &nFSGaneshas{
 		client: c.RESTClient(),
 		ns:     namespace,
@@ -59,8 +59,8 @@ func newNFSGaneshas(c *CephV1alpha1Client, namespace string) *nFSGaneshas {
 }
 
 // Get takes name of the nFSGanesha, and returns the corresponding nFSGanesha object, and an error if there is any.
-func (c *nFSGaneshas) Get(name string, options v1.GetOptions) (result *v1alpha1.NFSGanesha, err error) {
-	result = &v1alpha1.NFSGanesha{}
+func (c *nFSGaneshas) Get(name string, options v1.GetOptions) (result *v1beta1.NFSGanesha, err error) {
+	result = &v1beta1.NFSGanesha{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("nfsganeshas").
@@ -72,8 +72,8 @@ func (c *nFSGaneshas) Get(name string, options v1.GetOptions) (result *v1alpha1.
 }
 
 // List takes label and field selectors, and returns the list of NFSGaneshas that match those selectors.
-func (c *nFSGaneshas) List(opts v1.ListOptions) (result *v1alpha1.NFSGaneshaList, err error) {
-	result = &v1alpha1.NFSGaneshaList{}
+func (c *nFSGaneshas) List(opts v1.ListOptions) (result *v1beta1.NFSGaneshaList, err error) {
+	result = &v1beta1.NFSGaneshaList{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("nfsganeshas").
@@ -94,8 +94,8 @@ func (c *nFSGaneshas) Watch(opts v1.ListOptions) (watch.Interface, error) {
 }
 
 // Create takes the representation of a nFSGanesha and creates it.  Returns the server's representation of the nFSGanesha, and an error, if there is any.
-func (c *nFSGaneshas) Create(nFSGanesha *v1alpha1.NFSGanesha) (result *v1alpha1.NFSGanesha, err error) {
-	result = &v1alpha1.NFSGanesha{}
+func (c *nFSGaneshas) Create(nFSGanesha *v1beta1.NFSGanesha) (result *v1beta1.NFSGanesha, err error) {
+	result = &v1beta1.NFSGanesha{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("nfsganeshas").
@@ -106,8 +106,8 @@ func (c *nFSGaneshas) Create(nFSGanesha *v1alpha1.NFSGanesha) (result *v1alpha1.
 }
 
 // Update takes the representation of a nFSGanesha and updates it. Returns the server's representation of the nFSGanesha, and an error, if there is any.
-func (c *nFSGaneshas) Update(nFSGanesha *v1alpha1.NFSGanesha) (result *v1alpha1.NFSGanesha, err error) {
-	result = &v1alpha1.NFSGanesha{}
+func (c *nFSGaneshas) Update(nFSGanesha *v1beta1.NFSGanesha) (result *v1beta1.NFSGanesha, err error) {
+	result = &v1beta1.NFSGanesha{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("nfsganeshas").
@@ -141,8 +141,8 @@ func (c *nFSGaneshas) DeleteCollection(options *v1.DeleteOptions, listOptions v1
 }
 
 // Patch applies the patch and returns the patched nFSGanesha.
-func (c *nFSGaneshas) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.NFSGanesha, err error) {
-	result = &v1alpha1.NFSGanesha{}
+func (c *nFSGaneshas) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.NFSGanesha, err error) {
+	result = &v1beta1.NFSGanesha{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("nfsganeshas").
