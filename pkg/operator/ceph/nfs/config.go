@@ -24,11 +24,11 @@ const (
 	userID         = "admin"
 )
 
-func getGaneshaConfig(spec cephv1beta1.NFSGaneshaSpec) string {
-	return getCoreConfig(spec) + getExportConfig(spec)
+func getGaneshaConfig(spec cephv1beta1.NFSGaneshaSpec, nodeID string) string {
+	return getCoreConfig(spec, nodeID) + getExportConfig(spec)
 }
 
-func getCoreConfig(spec cephv1beta1.NFSGaneshaSpec) string {
+func getCoreConfig(spec cephv1beta1.NFSGaneshaSpec, nodeID string) string {
 	return `
 NFS_CORE_PARAM {
 	Enable_NLM = false;
@@ -60,7 +60,8 @@ NFSv4 {
 
 RADOS_KV {
 	ceph_conf = '` + cephConfigPath + `';
-	userid = '` + userID + `';
+	userid = ` + userID + `;
+	nodeid = ` + nodeID + `;
 	pool = "` + spec.ClientRecovery.Pool + `";
 	namespace = "` + spec.ClientRecovery.Namespace + `";
 }

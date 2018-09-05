@@ -45,17 +45,17 @@ func (c *GaneshaController) createGanesha(n cephv1beta1.NFSGanesha) error {
 
 	logger.Infof("start running ganesha %s", n.Name)
 
-	configName, err := c.generateConfig(n)
-	if err != nil {
-		return fmt.Errorf("failed to create config. %+v", err)
-	}
-
 	for i := 0; i < n.Spec.Server.Active; i++ {
 		name := k8sutil.IndexToName(i)
 
+		configName, err := c.generateConfig(n, name)
+		if err != nil {
+			return fmt.Errorf("failed to create config. %+v", err)
+		}
+
 		// start the deployment
 		deployment := c.makeDeployment(n, name, configName)
-		_, err := c.context.Clientset.ExtensionsV1beta1().Deployments(n.Namespace).Create(deployment)
+		_, err = c.context.Clientset.ExtensionsV1beta1().Deployments(n.Namespace).Create(deployment)
 		if err != nil {
 			if !errors.IsAlreadyExists(err) {
 				return fmt.Errorf("failed to create mds deployment. %+v", err)
@@ -89,18 +89,16 @@ func (c *GaneshaController) removeServerFromDatabase(n cephv1beta1.NFSGanesha, n
 	return c.context.Executor.ExecuteCommand(false, "", "ganesha-rados-grace", "--pool", n.Spec.ClientRecovery.Pool, "--ns", n.Spec.ClientRecovery.Namespace, "remove", name)
 }
 
-func (c *GaneshaController) generateConfig(n cephv1beta1.NFSGanesha) (string, error) {
+func (c *GaneshaController) generateConfig(n cephv1beta1.NFSGanesha, name string) (string, error) {
 
 	data := map[string]string{
-		"config": getGaneshaConfig(n.Spec),
+		"config": getGaneshaConfig(n.Spec, name),
 	}
 	configMap := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s", appName, n.Name),
+			Name:      fmt.Sprintf("%s-%s-%s", appName, n.Name, name),
 			Namespace: n.Namespace,
-			Labels: map[string]string{
-				k8sutil.AppAttr: appName,
-			},
+			Labels:    getLabels(n, name),
 		},
 		Data: data,
 	}
