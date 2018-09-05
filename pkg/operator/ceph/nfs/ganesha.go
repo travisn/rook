@@ -192,7 +192,7 @@ func (c *GaneshaController) makeDeployment(n cephv1beta1.NFSGanesha, name, confi
 	}
 	configMapSource := &v1.ConfigMapVolumeSource{
 		LocalObjectReference: v1.LocalObjectReference{Name: configName},
-		Items:                []v1.KeyToPath{{Key: "config", Path: "export.conf"}},
+		Items:                []v1.KeyToPath{{Key: "config", Path: "ganesha.conf"}},
 	}
 
 	podSpec := v1.PodSpec{
@@ -236,7 +236,7 @@ func (c *GaneshaController) ganeshaContainer(n cephv1beta1.NFSGanesha, name stri
 		Image: c.rookImage,
 		VolumeMounts: []v1.VolumeMount{
 			{Name: k8sutil.DataDirVolume, MountPath: k8sutil.DataDir},
-			{Name: ganeshaConfigVolume, MountPath: "/etc/ganesha/config"},
+			{Name: ganeshaConfigVolume, MountPath: "/etc/ganesha"},
 			k8sutil.ConfigOverrideMount(),
 		},
 		Env: []v1.EnvVar{

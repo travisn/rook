@@ -19,8 +19,52 @@ package nfs
 
 import cephv1beta1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1beta1"
 
+const (
+	cephConfigPath = "/etc/ceph/ceph.conf"
+	userID         = "admin"
+)
+
 func getGaneshaConfig(spec cephv1beta1.NFSGaneshaSpec) string {
-	return getExportConfig(spec) + getRadosKVConfig(spec)
+	return getCoreConfig(spec) + getExportConfig(spec)
+}
+
+func getCoreConfig(spec cephv1beta1.NFSGaneshaSpec) string {
+	return `
+NFS_CORE_PARAM {
+	Enable_NLM = false;
+	Enable_RQUOTA = false;
+	Protocols = 4;
+}
+
+CACHEINODE {
+	Dir_Max = 1;
+	Dir_Chunk = 0;
+	Cache_FDs = false;
+	NParts = 1;
+	Cache_Size = 1;
+}
+
+EXPORT_DEFAULTS {
+	Attr_Expiration_Time = 0;
+}
+
+RADOS_URLS {
+	ceph_conf = '` + cephConfigPath + `';
+	userid = '` + userID + `';
+}
+
+NFSv4 {
+	RecoveryBackend = 'rados_kv';
+	Minor_Versions = 1, 2;
+}
+
+RADOS_KV {
+	ceph_conf = '` + cephConfigPath + `';
+	userid = '` + userID + `';
+	pool = "` + spec.ClientRecovery.Pool + `";
+	namespace = "` + spec.ClientRecovery.Namespace + `";
+}
+`
 }
 
 func getExportConfig(spec cephv1beta1.NFSGaneshaSpec) string {
@@ -62,15 +106,6 @@ func getAllowedClientConfig(allowedClients []cephv1beta1.NFSAllowedClient) strin
 	}
 
 	return config
-}
-
-func getRadosKVConfig(spec cephv1beta1.NFSGaneshaSpec) string {
-	return `
-RADOS_KV
-{
-	pool = "` + spec.ClientRecovery.Pool + `";
-	namespace = "` + spec.ClientRecovery.Namespace + `";
-}`
 }
 
 func getPseudoPathWithDefault(export cephv1beta1.GaneshaExportSpec) string {
