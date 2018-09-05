@@ -20,7 +20,7 @@ package nfs
 import (
 	"fmt"
 
-	cephv1alpha1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1alpha1"
+	cephv1beta1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1beta1"
 	"github.com/rook/rook/pkg/clusterd"
 	opmon "github.com/rook/rook/pkg/operator/ceph/cluster/mon"
 	"github.com/rook/rook/pkg/operator/k8sutil"
@@ -38,7 +38,7 @@ const (
 )
 
 // Create the ganesha server
-func (c *GaneshaController) createGanesha(n cephv1alpha1.NFSGanesha) error {
+func (c *GaneshaController) createGanesha(n cephv1beta1.NFSGanesha) error {
 	if err := validateGanesha(c.context, n); err != nil {
 		return err
 	}
@@ -79,36 +79,20 @@ func (c *GaneshaController) createGanesha(n cephv1alpha1.NFSGanesha) error {
 	return nil
 }
 
-func (c *GaneshaController) addServerToDatabase(n cephv1alpha1.NFSGanesha, name string) error {
+func (c *GaneshaController) addServerToDatabase(n cephv1beta1.NFSGanesha, name string) error {
 	logger.Infof("Adding ganesha %s to grace db", name)
-	return c.context.Executor.ExecuteCommand(false, "", "ganesha-rados-grace", "--pool", n.Spec.Server.Pool, "add", name)
+	return c.context.Executor.ExecuteCommand(false, "", "ganesha-rados-grace", "--pool", n.Spec.ClientRecovery.Pool, "--ns", n.Spec.ClientRecovery.Namespace, "add", name)
 }
 
-func (c *GaneshaController) removeServerFromDatabase(n cephv1alpha1.NFSGanesha, name string) error {
+func (c *GaneshaController) removeServerFromDatabase(n cephv1beta1.NFSGanesha, name string) error {
 	logger.Infof("Removing ganesha %s from grace db", name)
-	return c.context.Executor.ExecuteCommand(false, "", "ganesha-rados-grace", "--pool", n.Spec.Server.Pool, "remove", name)
+	return c.context.Executor.ExecuteCommand(false, "", "ganesha-rados-grace", "--pool", n.Spec.ClientRecovery.Pool, "--ns", n.Spec.ClientRecovery.Namespace, "remove", name)
 }
 
-func (c *GaneshaController) generateConfig(n cephv1alpha1.NFSGanesha) (string, error) {
-	// TODO: Include export settings from the CRD
-	config := `EXPORT
-	{
-			Export_ID=100;
-			Protocols = 4;
-			Transports = TCP;
-			Path = /;
-			Pseudo = /cephfs/;
-			Access_Type = RW;
-			Attr_Expiration_Time = 0;
-			Delegations = R;
-			Squash = No_root_squash;
-			FSAL {
-					Name = CEPH;
-			}
-	}`
+func (c *GaneshaController) generateConfig(n cephv1beta1.NFSGanesha) (string, error) {
 
 	data := map[string]string{
-		"config": config,
+		"config": getGaneshaConfig(n.Spec),
 	}
 	configMap := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -132,7 +116,7 @@ func (c *GaneshaController) generateConfig(n cephv1alpha1.NFSGanesha) (string, e
 	return configMap.Name, nil
 }
 
-func (c *GaneshaController) createGaneshaService(n cephv1alpha1.NFSGanesha, name string) error {
+func (c *GaneshaController) createGaneshaService(n cephv1beta1.NFSGanesha, name string) error {
 	labels := getLabels(n, name)
 	svc := &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -171,7 +155,7 @@ func (c *GaneshaController) createGaneshaService(n cephv1alpha1.NFSGanesha, name
 }
 
 // Delete the ganesha server
-func (c *GaneshaController) deleteGanesha(n cephv1alpha1.NFSGanesha) error {
+func (c *GaneshaController) deleteGanesha(n cephv1beta1.NFSGanesha) error {
 	for i := 0; i < n.Spec.Server.Active; i++ {
 		name := k8sutil.IndexToName(i)
 
@@ -194,11 +178,11 @@ func (c *GaneshaController) deleteGanesha(n cephv1alpha1.NFSGanesha) error {
 	return nil
 }
 
-func instanceName(n cephv1alpha1.NFSGanesha, name string) string {
+func instanceName(n cephv1beta1.NFSGanesha, name string) string {
 	return fmt.Sprintf("%s-%s-%s", appName, n.Name, name)
 }
 
-func (c *GaneshaController) makeDeployment(n cephv1alpha1.NFSGanesha, name, configName string) *extensions.Deployment {
+func (c *GaneshaController) makeDeployment(n cephv1beta1.NFSGanesha, name, configName string) *extensions.Deployment {
 	deployment := &extensions.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            instanceName(n, name),
@@ -241,7 +225,7 @@ func (c *GaneshaController) makeDeployment(n cephv1alpha1.NFSGanesha, name, conf
 	return deployment
 }
 
-func (c *GaneshaController) ganeshaContainer(n cephv1alpha1.NFSGanesha, name string) v1.Container {
+func (c *GaneshaController) ganeshaContainer(n cephv1beta1.NFSGanesha, name string) v1.Container {
 
 	return v1.Container{
 		Args: []string{
@@ -269,7 +253,7 @@ func (c *GaneshaController) ganeshaContainer(n cephv1alpha1.NFSGanesha, name str
 	}
 }
 
-func getLabels(n cephv1alpha1.NFSGanesha, name string) map[string]string {
+func getLabels(n cephv1beta1.NFSGanesha, name string) map[string]string {
 	return map[string]string{
 		k8sutil.AppAttr:     appName,
 		k8sutil.ClusterAttr: n.Namespace,
@@ -278,26 +262,56 @@ func getLabels(n cephv1alpha1.NFSGanesha, name string) map[string]string {
 	}
 }
 
-func validateGanesha(context *clusterd.Context, n cephv1alpha1.NFSGanesha) error {
+func validateGanesha(context *clusterd.Context, n cephv1beta1.NFSGanesha) error {
+	// core properties
 	if n.Name == "" {
 		return fmt.Errorf("missing name")
 	}
 	if n.Namespace == "" {
 		return fmt.Errorf("missing namespace")
 	}
-	if n.Spec.Server.Active == 0 {
-		return fmt.Errorf("at least one active server required")
+
+	// Store properties
+	if n.Spec.Store.Name == "" {
+		return fmt.Errorf("missing storeName")
+	}
+	if n.Spec.Store.Type != "file" && n.Spec.Store.Type != "object" {
+		return fmt.Errorf("unrecognized store type: %s", n.Spec.Store.Type)
 	}
 
-	err := verifyExportExists(context, n.Spec.Export)
-	if err != nil {
-		return fmt.Errorf("failed to check for export existence. %+v", err)
+	// Client recovery properties
+	if n.Spec.ClientRecovery.Pool == "" {
+		return fmt.Errorf("missing clientRecovery.pool")
+	}
+	if n.Spec.ClientRecovery.Namespace == "" {
+		return fmt.Errorf("missing clientRecovery.namesapce")
+	}
+
+	// Export properties
+	if len(n.Spec.Exports) == 0 {
+		return fmt.Errorf("at least one export is required")
+	}
+	for i, export := range n.Spec.Exports {
+		if export.Path == "" {
+			return fmt.Errorf("missing path for export %d", i)
+		}
+		if export.PseudoPath == "" {
+			return fmt.Errorf("missing pseudoPath for export %d", i)
+		}
+		if err := verifyExportExists(context, export); err != nil {
+			return fmt.Errorf("invalid export path. %+v", err)
+		}
+	}
+
+	// Ganesha server properties
+	if n.Spec.Server.Active == 0 {
+		return fmt.Errorf("at least one active server required")
 	}
 
 	return nil
 }
 
-func verifyExportExists(context *clusterd.Context, export cephv1alpha1.GaneshaExportSpec) error {
-	// TODO: Check if the pool and the RADOS object exist with the exports
+func verifyExportExists(context *clusterd.Context, export cephv1beta1.GaneshaExportSpec) error {
+	// TODO: Check if the file or object store exist with the path to export
 	return nil
 }

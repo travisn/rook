@@ -1,16 +1,37 @@
-apiVersion: ceph.rook.io/v1alpha1
+apiVersion: ceph.rook.io/v1beta1
 kind: NFSGanesha
 metadata:
   name: my-nfs
   namespace: rook-ceph
 spec:
-  export:
-    # TODO: Properties for the exports
+  store:
+    # The name of the filesystem or object store CRD that ganesha will export
+    name: myfs
+    # Either "file" for a filesystem or "object" for the object store
+    type: file
+  clientRecovery:
+    # RADOS pool where NFS client recovery data is stored.
+    # In this example the data pool for the "myfs" filesystem is used.
+    # If using the object store example, the data pool would be "my-store.rgw.buckets.data".
+    pool: myfs-data0
+    # RADOS namespace where NFS client recovery data is stored in the pool.
+    namespace: ganesha-ns
+  exports:
+    # The pseudoroot path. This is where the export will appear in the NFSv4 pseudoroot namespace.
+  - pseudoPath: /cephfs/share1
+    # The directory in the exported file system this export is rooted on
+    path: /share1
+    accessType: ReadWrite
+    squash: No_root_squash
+    # List of allowed clients and their settings
+    allowedClients:
+    - clients: 192.168.0.0/16, minikube
+      accessType: ReadOnly
+      squash: none
+  # Settings for the ganesha server
   server:
     # the number of active ganesha servers
     active: 3
-    # the pool where the grace database is stored
-    pool: myfs-metadata
     # where to run the nfs ganesha server
     placement:
     #  nodeAffinity:

@@ -289,3 +289,89 @@ type GatewaySpec struct {
 	// The resource requirements for the rgw pods
 	Resources v1.ResourceRequirements `json:"resources"`
 }
+
+// +genclient
+// +genclient:noStatus
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type NFSGanesha struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata"`
+	Spec              NFSGaneshaSpec `json:"spec"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type NFSGaneshaList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []NFSGanesha `json:"items"`
+}
+
+// NFSGaneshaSpec represents the spec of an nfs ganesha server
+type NFSGaneshaSpec struct {
+	Store GaneshaStoreSpec `json:"store"`
+
+	ClientRecovery GaneshaClientRecoverySpec `json:"clientRecovery"`
+
+	// The metadata pool settings
+	Server GaneshaServerSpec `json:"server"`
+
+	// The data pool settings
+	Exports []GaneshaExportSpec `json:"exports"`
+}
+
+type GaneshaStoreSpec struct {
+	// Name is the CRD name of the filesystem or objectstore CRD that Ganesha will be exporting
+	Name string `json:"name"`
+
+	// Type is either "file" or "object".
+	Type string `json:"type"`
+}
+
+type GaneshaClientRecoverySpec struct {
+	// Pool is the RADOS pool where NFS client recovery data is stored.
+	Pool string `json:"pool"`
+
+	// Namespace is the RADOS namespace where NFS client recovery data is stored.
+	Namespace string `json:"namespace"`
+}
+
+type GaneshaServerSpec struct {
+	// The number of active Ganesha servers
+	Active int `json:"active"`
+
+	// The affinity to place the ganesha pods
+	Placement rook.Placement `json:"placement"`
+
+	// Resources set resource requests and limits
+	Resources v1.ResourceRequirements `json:"resources,omitempty"`
+}
+
+type GaneshaExportSpec struct {
+	// PseudoPath is where the export will appear in the NFSv4 pseudoroot namespace.
+	PseudoPath string `json:"pseudoPath"`
+
+	// Path is the directory in the exported file system this export is rooted on
+	Path string `json:"path"`
+
+	// The default access given to clients (ReadOnly, ReadWrite)
+	AccessType string `json:"accessType"`
+
+	// The default policy for squashing the requests. If blank, "No_root_squash" is the default.
+	Squash string `json:"squash"`
+
+	// AllowedClients is the list of allowed client connections
+	AllowedClients []NFSAllowedClient `json:"allowedClients"`
+}
+
+type NFSAllowedClient struct {
+	// Clients is a comma-separated list of clients that are allowed to connect, identified either by IP, IP range, or host name.
+	Clients string `json:"clients"`
+
+	// The access given to clients (ReadOnly, ReadWrite)
+	AccessType string `json:"accessType"`
+
+	// The policy for squashing the requests. If blank, "none" is the default.
+	Squash string `json:"squash"`
+}
