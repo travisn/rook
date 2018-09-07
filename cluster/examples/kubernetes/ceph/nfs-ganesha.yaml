@@ -18,16 +18,16 @@ spec:
     namespace: ganesha-ns
   exports:
     # The pseudoroot path. This is where the export will appear in the NFSv4 pseudoroot namespace.
-  - pseudoPath: /cephfs/share1
+  - pseudoPath: /cephfs
     # The directory in the exported file system this export is rooted on
-    path: /share1
+    path: /
     accessType: ReadWrite
     squash: No_root_squash
     # List of allowed clients and their settings
-    allowedClients:
-    - clients: 192.168.0.0/16, minikube
-      accessType: ReadOnly
-      squash: none
+    #    allowedClients:
+    #- clients: 192.168.0.0/16, minikube
+    #  accessType: ReadOnly
+    #  squash: none
   # Settings for the ganesha server
   server:
     # the number of active ganesha servers
