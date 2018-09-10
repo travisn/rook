@@ -118,10 +118,9 @@ func (c *GaneshaController) createGaneshaService(n cephv1beta1.NFSGanesha, name 
 	labels := getLabels(n, name)
 	svc := &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            instanceName(n, name),
-			Namespace:       n.Namespace,
-			Labels:          labels,
-			OwnerReferences: []metav1.OwnerReference{c.ownerRef},
+			Name:      instanceName(n, name),
+			Namespace: n.Namespace,
+			Labels:    labels,
 		},
 		Spec: v1.ServiceSpec{
 			Selector: labels,
@@ -135,6 +134,7 @@ func (c *GaneshaController) createGaneshaService(n cephv1beta1.NFSGanesha, name 
 			},
 		},
 	}
+	k8sutil.SetOwnerRef(c.context.Clientset, n.Namespace, &svc.ObjectMeta, &c.ownerRef)
 	if c.hostNetwork {
 		svc.Spec.ClusterIP = v1.ClusterIPNone
 	}
