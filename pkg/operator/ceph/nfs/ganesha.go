@@ -183,11 +183,11 @@ func instanceName(n cephv1beta1.NFSGanesha, name string) string {
 func (c *GaneshaController) makeDeployment(n cephv1beta1.NFSGanesha, name, configName string) *extensions.Deployment {
 	deployment := &extensions.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            instanceName(n, name),
-			Namespace:       n.Namespace,
-			OwnerReferences: []metav1.OwnerReference{c.ownerRef},
+			Name:      instanceName(n, name),
+			Namespace: n.Namespace,
 		},
 	}
+	k8sutil.SetOwnerRef(c.context.Clientset, n.Namespace, &deployment.ObjectMeta, &c.ownerRef)
 	configMapSource := &v1.ConfigMapVolumeSource{
 		LocalObjectReference: v1.LocalObjectReference{Name: configName},
 		Items:                []v1.KeyToPath{{Key: "config", Path: "ganesha.conf"}},
