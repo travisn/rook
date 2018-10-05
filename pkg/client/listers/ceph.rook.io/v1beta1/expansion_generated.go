@@ -34,6 +34,14 @@ type FilesystemListerExpansion interface{}
 // FilesystemNamespaceLister.
 type FilesystemNamespaceListerExpansion interface{}
 
+// NFSGaneshaListerExpansion allows custom methods to be added to
+// NFSGaneshaLister.
+type NFSGaneshaListerExpansion interface{}
+
+// NFSGaneshaNamespaceListerExpansion allows custom methods to be added to
+// NFSGaneshaNamespaceLister.
+type NFSGaneshaNamespaceListerExpansion interface{}
+
 // ObjectStoreListerExpansion allows custom methods to be added to
 // ObjectStoreLister.
 type ObjectStoreListerExpansion interface{}

@@ -98,7 +98,7 @@ func (c *GaneshaController) onUpdate(oldObj, newObj interface{}) {
 		return
 	}
 
-	logger.Infof("TODO: Update the ganesha server from %d to %s active count", oldNFS.Spec.Server.Active, newNFS.Spec.Server.Active)
+	logger.Infof("TODO: Update the ganesha server from %d to %d active count", oldNFS.Spec.Server.Active, newNFS.Spec.Server.Active)
 }
 
 func (c *GaneshaController) onDelete(obj interface{}) {
