@@ -73,11 +73,6 @@ func generateConfigFiles(context *clusterd.Context, config *Config) error {
 }
 
 func startGanesha(context *clusterd.Context, config *Config) error {
-	logger.Infof("starting rpcbind for ganesha")
-	if err := context.Executor.ExecuteCommand(false, "", "rpcbind"); err != nil {
-		return fmt.Errorf("failed to start mds. %+v", err)
-	}
-
 	logger.Infof("starting ganesha server %s", config.Name)
 	// For debug logging, add the params: "-N", "NIV_DEBUG"
 	if err := context.Executor.ExecuteCommand(false, "", "ganesha.nfsd", "-F", "-L", "STDOUT"); err != nil {
