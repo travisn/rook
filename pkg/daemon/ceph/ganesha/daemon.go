@@ -18,8 +18,6 @@ package ganesha
 import (
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/coreos/pkg/capnslog"
 	"github.com/rook/rook/pkg/clusterd"
@@ -44,23 +42,7 @@ func Run(context *clusterd.Context, config *Config) error {
 		return fmt.Errorf("failed to generate ganesha config files. %+v", err)
 	}
 
-	err = startGanesha(context, config)
-	if err != nil {
-		return fmt.Errorf("failed to run ganesha. %+v", err)
-	}
-
-	signalChan := make(chan os.Signal, 1)
-	stopChan := make(chan struct{})
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-
-	for {
-		select {
-		case <-signalChan:
-			logger.Infof("shutdown signal received, exiting...")
-			close(stopChan)
-			return nil
-		}
-	}
+	return startGanesha(context, config)
 }
 
 func generateConfigFiles(context *clusterd.Context, config *Config) error {
@@ -83,12 +65,12 @@ func startGanesha(context *clusterd.Context, config *Config) error {
 		logger.Errorf("Failed to start dbus daemon: %+v", err)
 	}
 
-	logger.Infof("starting ganesha server %s", config.Name)
+	// Run the ganesha process. If the process exits, the Rook process will exit and the pod will be restarted.
 	// For debug logging, add the params: "-N", "NIV_DEBUG"
+	logger.Infof("running ganesha server %s", config.Name)
 	if err := context.Executor.ExecuteCommand(false, "", "ganesha.nfsd", "-F", "-L", "STDOUT"); err != nil {
-		return fmt.Errorf("failed to start ganesha. %+v", err)
+		return fmt.Errorf("failed to run ganesha. %+v", err)
 	}
 
-	logger.Infof("started ganesha")
-	return nil
+	return fmt.Errorf("ganesha exited for an unknown reason")
 }
