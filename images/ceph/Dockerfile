@@ -18,12 +18,14 @@ RUN yum --assumeyes install \
     dbus \
     yum-plugin-copr \
     net-tools \
-    nmap-ncat && \
+    nmap-ncat \
+    python2-pip && \
     yum --assumeyes copr enable jlayton/ceph && \
     yum --assumeyes copr enable jlayton/nfs-ganesha && \
     yum --assumeyes update libcephfs2 librados2 libntirpc nfs-ganesha-ceph nfs-ganesha-rgw nfs-ganesha && \
     yum --assumeyes install nfs-ganesha-rados-grace && \
-    yum clean all && rm -rf /tmp/* /var/tmp/*
+    yum clean all && rm -rf /tmp/* /var/tmp/* && \
+    pip install kubernetes
 
 ARG ARCH
 ARG TINI_VERSION
