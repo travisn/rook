@@ -148,21 +148,20 @@ func (c *Cluster) makeDeployment(nodeName string, devices []rookalpha.Device, se
 		// for this scenario, we will copy the binaries necessary to a mount, which will then be mounted
 		// to the daemon container.
 		sourcePath := path.Join("/dev/disk/by-partuuid", osd.DevicePartUUID)
-		command = []string{path.Join(rookBinariesMountPath, "tini")}
+		command = []string{path.Join(k8sutil.BinariesMountPath, "tini")}
 		args = append([]string{
-			"--", path.Join(rookBinariesMountPath, "rook"),
+			"--", path.Join(k8sutil.BinariesMountPath, "rook"),
 			"ceph", "osd", "filestore-device",
 			"--source-path", sourcePath,
 			"--mount-path", osd.DataPath,
 			"--"},
 			commonArgs...)
 
-		var copyBinariesVolume v1.Volume
-		copyBinariesVolume, copyBinariesContainer = c.getCopyBinariesContainer()
-		// Add the volume to the spec and the mount to the daemon container
-		volumes = append(volumes, copyBinariesVolume)
-		volumeMounts = append(volumeMounts, copyBinariesContainer.VolumeMounts[0])
-
+		binariesEnvVar, binariesVolume, binariesMount := k8sutil.BinariesMountInfo()
+		configEnvVars = append(configEnvVars, binariesEnvVar)
+		volumes = append(volumes, binariesVolume)
+		volumeMounts = append(volumeMounts, binariesMount)
+		configVolumeMounts = append(configVolumeMounts, binariesMount)
 	} else {
 		// other osds can launch the osd daemon directly
 		command = []string{"ceph-osd"}

@@ -68,6 +68,10 @@ var (
 	copyBinariesPath    string
 )
 
+func addCopyBinariesFlags(command *cobra.Command) {
+	command.Flags().StringVar(&copyBinariesPath, "copy-binaries-path", "", "If specified, copy the rook binaries to this path for use by the daemon container")
+}
+
 func addOSDFlags(command *cobra.Command) {
 	addOSDConfigFlags(osdConfigCmd)
 	addOSDConfigFlags(provisionCmd)
@@ -82,9 +86,7 @@ func addOSDFlags(command *cobra.Command) {
 
 	// flags for generating the osd config
 	osdConfigCmd.Flags().IntVar(&osdID, "osd-id", -1, "osd id for which to generate config")
-
-	// flag for copying the rook binaries for use by a ceph container
-	copyBinariesCmd.Flags().StringVar(&copyBinariesPath, "path", "", "Copy the rook binaries to this path for use by a ceph container")
+	addCopyBinariesFlags(osdConfigCmd)
 
 	// flags for running filestore on a device
 	filestoreDeviceCmd.Flags().StringVar(&mountSourcePath, "source-path", "", "the source path of the device to mount")
@@ -184,18 +186,8 @@ func writeOSDConfig(cmd *cobra.Command, args []string) error {
 	if err := osddaemon.WriteConfigFile(context, &clusterInfo, kv, osdID, cfg.storeConfig, cfg.nodeName, crushLocation); err != nil {
 		logger.Errorf("failed to write osd config file. %+v", err)
 	}
-	return nil
-}
 
-func copyRookBinaries(cmd *cobra.Command, args []string) error {
-	if err := flags.VerifyRequiredFlags(copyBinariesCmd, []string{"path"}); err != nil {
-		return err
-	}
-	if err := osddaemon.CopyBinariesForDaemon(copyBinariesPath); err != nil {
-		logger.Errorf("failed to copy rook binaries for filestore device. %+v", err)
-	} else {
-		logger.Infof("successfully copied rook binaries")
-	}
+	copyBinaries()
 	return nil
 }
 
@@ -264,4 +256,14 @@ func commonOSDInit(cmd *cobra.Command) {
 	rook.LogStartupInfo(cmd.Flags())
 
 	clusterInfo.Monitors = mondaemon.ParseMonEndpoints(cfg.monEndpoints)
+}
+
+func copyBinaries() {
+	if copyBinariesPath != "" {
+		if err := osddaemon.CopyBinariesForDaemon(copyBinariesPath); err != nil {
+			logger.Errorf("failed to copy rook binaries for daemon container. %+v", err)
+		} else {
+			logger.Infof("successfully copied rook binaries")
+		}
+	}
 }
