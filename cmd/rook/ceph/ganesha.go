@@ -29,36 +29,70 @@ var (
 
 var ganeshaCmd = &cobra.Command{
 	Use:    "ganesha",
-	Short:  "Generates config and runs the nfs ganesha daemon",
+	Short:  "Configures and runs the nfs ganesha daemon",
+	Hidden: true,
+}
+var ganeshaConfigCmd = &cobra.Command{
+	Use:    "init",
+	Short:  "Updates ceph.conf for ganesha",
+	Hidden: true,
+}
+var ganeshaRunCmd = &cobra.Command{
+	Use:    "run",
+	Short:  "Runs the nfs ganesha daemon",
 	Hidden: true,
 }
 
 func init() {
-	ganeshaCmd.Flags().StringVar(&ganeshaName, "ganesha-name", "", "name of the ganesha server")
-	addCephFlags(ganeshaCmd)
+	ganeshaRunCmd.Flags().StringVar(&ganeshaName, "ganesha-name", "", "name of the ganesha server")
+
+	addCopyBinariesFlags(ganeshaConfigCmd)
+	addCephFlags(ganeshaConfigCmd)
+
+	ganeshaCmd.AddCommand(ganeshaConfigCmd)
+	ganeshaCmd.AddCommand(ganeshaRunCmd)
 
 	flags.SetFlagsFromEnv(ganeshaCmd.Flags(), rook.RookEnvVarPrefix)
+	flags.SetFlagsFromEnv(ganeshaConfigCmd.Flags(), rook.RookEnvVarPrefix)
+	flags.SetFlagsFromEnv(ganeshaRunCmd.Flags(), rook.RookEnvVarPrefix)
 
-	ganeshaCmd.RunE = startGanesha
+	ganeshaConfigCmd.RunE = configGanesha
+	ganeshaRunCmd.RunE = startGanesha
 }
 
-func startGanesha(cmd *cobra.Command, args []string) error {
-	required := []string{"ganesha-name", "mon-endpoints", "cluster-name", "admin-secret", "public-ip", "private-ip"}
-	if err := flags.VerifyRequiredFlags(ganeshaCmd, required); err != nil {
+func configGanesha(cmd *cobra.Command, args []string) error {
+	required := []string{"copy-binaries-path", "mon-endpoints", "cluster-name", "admin-secret", "public-ip", "private-ip"}
+	if err := flags.VerifyRequiredFlags(ganeshaConfigCmd, required); err != nil {
 		return err
 	}
 
 	rook.SetLogLevel()
-
 	rook.LogStartupInfo(ganeshaCmd.Flags())
 
 	clusterInfo.Monitors = mon.ParseMonEndpoints(cfg.monEndpoints)
-	config := &ganesha.Config{
-		Name:        ganeshaName,
-		ClusterInfo: &clusterInfo,
+
+	// generate the ceph config
+	err := ganesha.Initialize(createContext(), &clusterInfo)
+	if err != nil {
+		rook.TerminateFatal(err)
 	}
 
-	err := ganesha.Run(createContext(), config)
+	// copy the rook and tini binaries for use by the daemon container
+	copyBinaries()
+
+	return nil
+}
+
+func startGanesha(cmd *cobra.Command, args []string) error {
+	required := []string{"ganesha-name"}
+	if err := flags.VerifyRequiredFlags(ganeshaRunCmd, required); err != nil {
+		return err
+	}
+
+	rook.SetLogLevel()
+	rook.LogStartupInfo(ganeshaCmd.Flags())
+
+	err := ganesha.Run(createContext(), ganeshaName)
 	if err != nil {
 		rook.TerminateFatal(err)
 	}

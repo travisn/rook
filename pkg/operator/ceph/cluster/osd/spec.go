@@ -145,25 +145,18 @@ func (c *Cluster) makeDeployment(nodeName string, devices []rookalpha.Device, se
 		// for this scenario, we will copy the binaries necessary to a mount, which will then be mounted
 		// to the daemon container.
 		sourcePath := path.Join("/dev/disk/by-partuuid", osd.DevicePartUUID)
-		mountPath := "/rook"
-		command = []string{path.Join(mountPath, "tini")}
+		command = []string{path.Join(k8sutil.BinariesMountPath, "tini")}
 		args = append([]string{
-			"--", path.Join(mountPath, "rook"),
+			"--", path.Join(k8sutil.BinariesMountPath, "rook"),
 			"ceph", "osd", "filestore-device",
 			"--source-path", sourcePath,
 			"--mount-path", osd.DataPath,
 			"--"},
 			commonArgs...)
 
-		// To get rook inside the container, the config init container needs to copy "tini" and "rook" binaries into a volume.
-		// Set the config flag so rook will copy the binaries.
-		configEnvVars = append(configEnvVars, v1.EnvVar{Name: "ROOK_COPY_BINARIES_PATH", Value: mountPath})
-
-		// Create the volume and mount that will be shared between the init container and the daemon container
-		volumeName := "rookbinaries"
-		binariesVolume := v1.Volume{Name: volumeName, VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}}}
+		binariesEnvVar, binariesVolume, binariesMount := k8sutil.BinariesMountInfo()
+		configEnvVars = append(configEnvVars, binariesEnvVar)
 		volumes = append(volumes, binariesVolume)
-		binariesMount := v1.VolumeMount{Name: volumeName, MountPath: mountPath}
 		volumeMounts = append(volumeMounts, binariesMount)
 		configVolumeMounts = append(configVolumeMounts, binariesMount)
 	} else {

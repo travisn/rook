@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Rook Authors. All rights reserved.
+Copyright 2018 The Rook Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,19 +22,10 @@ import (
 
 	cephv1beta1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1beta1"
 	"github.com/rook/rook/pkg/clusterd"
-	opmon "github.com/rook/rook/pkg/operator/ceph/cluster/mon"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	"k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-)
-
-const (
-	appName             = "rook-ceph-ganesha"
-	ganeshaConfigVolume = "ganesha-config"
-	ganeshaPort         = 2049
 )
 
 // Create the ganesha server
@@ -114,44 +105,6 @@ func (c *GaneshaController) generateConfig(n cephv1beta1.NFSGanesha, name string
 	return configMap.Name, nil
 }
 
-func (c *GaneshaController) createGaneshaService(n cephv1beta1.NFSGanesha, name string) error {
-	labels := getLabels(n, name)
-	svc := &v1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      instanceName(n, name),
-			Namespace: n.Namespace,
-			Labels:    labels,
-		},
-		Spec: v1.ServiceSpec{
-			Selector: labels,
-			Ports: []v1.ServicePort{
-				{
-					Name:       "nfs",
-					Port:       ganeshaPort,
-					TargetPort: intstr.FromInt(int(ganeshaPort)),
-					Protocol:   v1.ProtocolTCP,
-				},
-			},
-		},
-	}
-	k8sutil.SetOwnerRef(c.context.Clientset, n.Namespace, &svc.ObjectMeta, &c.ownerRef)
-	if c.hostNetwork {
-		svc.Spec.ClusterIP = v1.ClusterIPNone
-	}
-
-	svc, err := c.context.Clientset.CoreV1().Services(n.Namespace).Create(svc)
-	if err != nil {
-		if !errors.IsAlreadyExists(err) {
-			return fmt.Errorf("failed to create ganesha service. %+v", err)
-		}
-		logger.Infof("ganesha service already created")
-		return nil
-	}
-
-	logger.Infof("ganesha service running at %s:%d", svc.Spec.ClusterIP, ganeshaPort)
-	return nil
-}
-
 // Delete the ganesha server
 func (c *GaneshaController) deleteGanesha(n cephv1beta1.NFSGanesha) error {
 	for i := 0; i < n.Spec.Server.Active; i++ {
@@ -178,86 +131,6 @@ func (c *GaneshaController) deleteGanesha(n cephv1beta1.NFSGanesha) error {
 
 func instanceName(n cephv1beta1.NFSGanesha, name string) string {
 	return fmt.Sprintf("%s-%s-%s", appName, n.Name, name)
-}
-
-func (c *GaneshaController) makeDeployment(n cephv1beta1.NFSGanesha, name, configName string) *extensions.Deployment {
-	deployment := &extensions.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      instanceName(n, name),
-			Namespace: n.Namespace,
-		},
-	}
-	k8sutil.SetOwnerRef(c.context.Clientset, n.Namespace, &deployment.ObjectMeta, &c.ownerRef)
-	configMapSource := &v1.ConfigMapVolumeSource{
-		LocalObjectReference: v1.LocalObjectReference{Name: configName},
-		Items:                []v1.KeyToPath{{Key: "config", Path: "ganesha.conf"}},
-	}
-
-	podSpec := v1.PodSpec{
-		Containers:    []v1.Container{c.ganeshaContainer(n, name)},
-		RestartPolicy: v1.RestartPolicyAlways,
-		Volumes: []v1.Volume{
-			{Name: k8sutil.DataDirVolume, VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}}},
-			{Name: ganeshaConfigVolume, VolumeSource: v1.VolumeSource{ConfigMap: configMapSource}},
-			k8sutil.ConfigOverrideVolume(),
-		},
-		HostNetwork: c.hostNetwork,
-	}
-	if c.hostNetwork {
-		podSpec.DNSPolicy = v1.DNSClusterFirstWithHostNet
-	}
-	n.Spec.Server.Placement.ApplyToPodSpec(&podSpec)
-
-	podTemplateSpec := v1.PodTemplateSpec{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        instanceName(n, name),
-			Labels:      getLabels(n, name),
-			Annotations: map[string]string{},
-		},
-		Spec: podSpec,
-	}
-
-	// Multiple replicas of the ganesha service would be handled by creating a service and a new deployment for each one, rather than increasing the pod count here
-	replicas := int32(1)
-	deployment.Spec = extensions.DeploymentSpec{Template: podTemplateSpec, Replicas: &replicas}
-	return deployment
-}
-
-func (c *GaneshaController) ganeshaContainer(n cephv1beta1.NFSGanesha, name string) v1.Container {
-
-	return v1.Container{
-		Args: []string{
-			"ceph",
-			"ganesha",
-		},
-		Name:  "nfs-ganesha",
-		Image: c.rookImage,
-		VolumeMounts: []v1.VolumeMount{
-			{Name: k8sutil.DataDirVolume, MountPath: k8sutil.DataDir},
-			{Name: ganeshaConfigVolume, MountPath: "/etc/ganesha"},
-			k8sutil.ConfigOverrideMount(),
-		},
-		Env: []v1.EnvVar{
-			{Name: "ROOK_POD_NAME", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
-			{Name: "ROOK_GANESHA_NAME", Value: name},
-			opmon.ClusterNameEnvVar(n.Namespace),
-			opmon.EndpointEnvVar(),
-			opmon.AdminSecretEnvVar(),
-			k8sutil.PodIPEnvVar(k8sutil.PrivateIPEnvVar),
-			k8sutil.PodIPEnvVar(k8sutil.PublicIPEnvVar),
-			k8sutil.ConfigOverrideEnvVar(),
-		},
-		Resources: n.Spec.Server.Resources,
-	}
-}
-
-func getLabels(n cephv1beta1.NFSGanesha, name string) map[string]string {
-	return map[string]string{
-		k8sutil.AppAttr:     appName,
-		k8sutil.ClusterAttr: n.Namespace,
-		"nfs_ganesha":       n.Name,
-		"instance":          name,
-	}
 }
 
 func validateGanesha(context *clusterd.Context, n cephv1beta1.NFSGanesha) error {

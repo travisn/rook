@@ -19,44 +19,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/coreos/pkg/capnslog"
 	"github.com/rook/rook/pkg/clusterd"
-	cephconfig "github.com/rook/rook/pkg/daemon/ceph/config"
 )
 
-var logger = capnslog.NewPackageLogger("github.com/rook/rook", "ganesha")
+func Run(context *clusterd.Context, name string) error {
 
-const (
-	cephConfigPath = "/etc/ceph/ceph.conf"
-)
-
-type Config struct {
-	Name        string
-	ClusterInfo *cephconfig.ClusterInfo
-}
-
-func Run(context *clusterd.Context, config *Config) error {
-
-	err := generateConfigFiles(context, config)
-	if err != nil {
-		return fmt.Errorf("failed to generate ganesha config files. %+v", err)
-	}
-
-	return startGanesha(context, config)
-}
-
-func generateConfigFiles(context *clusterd.Context, config *Config) error {
-	// write the latest config to the config dir
-	if err := cephconfig.GenerateAdminConnectionConfig(context, config.ClusterInfo); err != nil {
-		return fmt.Errorf("failed to write connection config. %+v", err)
-	}
-
-	return nil
-}
-
-func startGanesha(context *clusterd.Context, config *Config) error {
-	err := os.Mkdir("/run/dbus", 0755)
-	if err != nil {
+	// create the run dir for dbus to start
+	if err := os.Mkdir("/run/dbus", 0755); err != nil {
 		logger.Errorf("Couldn't create /run/dbus: %+v", err)
 	}
 
@@ -67,7 +36,7 @@ func startGanesha(context *clusterd.Context, config *Config) error {
 
 	// Run the ganesha process. If the process exits, the Rook process will exit and the pod will be restarted.
 	// For debug logging, add the params: "-N", "NIV_DEBUG"
-	logger.Infof("running ganesha server %s", config.Name)
+	logger.Infof("running ganesha server %s", name)
 	if err := context.Executor.ExecuteCommand(false, "", "ganesha.nfsd", "-F", "-L", "STDOUT"); err != nil {
 		return fmt.Errorf("failed to run ganesha. %+v", err)
 	}
