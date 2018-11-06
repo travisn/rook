@@ -50,15 +50,17 @@ var NFSGaneshaResource = opkit.CustomResource{
 type GaneshaController struct {
 	context     *clusterd.Context
 	rookImage   string
+	cephVersion cephv1beta1.CephVersionSpec
 	hostNetwork bool
 	ownerRef    metav1.OwnerReference
 }
 
 // NewNFSGaneshaController create controller for watching NFS custom resources created
-func NewGaneshaController(context *clusterd.Context, rookImage string, hostNetwork bool, ownerRef metav1.OwnerReference) *GaneshaController {
+func NewGaneshaController(context *clusterd.Context, rookImage string, cephVersion cephv1beta1.CephVersionSpec, hostNetwork bool, ownerRef metav1.OwnerReference) *GaneshaController {
 	return &GaneshaController{
 		context:     context,
 		rookImage:   rookImage,
+		cephVersion: cephVersion,
 		hostNetwork: hostNetwork,
 		ownerRef:    ownerRef,
 	}

@@ -163,7 +163,7 @@ func (c *GaneshaController) daemonContainer(n cephv1beta1.NFSGanesha, name strin
 			"run",
 		},
 		Name:  "nfs-ganesha",
-		Image: c.rookImage,
+		Image: c.cephVersion.Image,
 		VolumeMounts: append(
 			opspec.CephVolumeMounts(),
 			configMount,
