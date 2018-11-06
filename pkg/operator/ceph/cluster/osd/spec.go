@@ -157,11 +157,13 @@ func (c *Cluster) makeDeployment(nodeName string, devices []rookalpha.Device, se
 			"--"},
 			commonArgs...)
 
-		binariesEnvVar, binariesVolume, binariesMount := k8sutil.BinariesMountInfo()
-		configEnvVars = append(configEnvVars, binariesEnvVar)
-		volumes = append(volumes, binariesVolume)
-		volumeMounts = append(volumeMounts, binariesMount)
-		configVolumeMounts = append(configVolumeMounts, binariesMount)
+		var copyBinariesVolume v1.Volume
+		copyBinariesVolume, copyBinariesContainer = c.getCopyBinariesContainer()
+		// Add the volume to the spec and the mount to the daemon container
+		volumes = append(volumes, copyBinariesVolume)
+		volumeMounts = append(volumeMounts, copyBinariesContainer.VolumeMounts[0])
+		configEnvVars = append(configEnvVars, copyBinariesContainer.Env[0])
+		configVolumeMounts = append(configVolumeMounts, copyBinariesContainer.VolumeMounts[0])
 	} else {
 		// other osds can launch the osd daemon directly
 		command = []string{"ceph-osd"}

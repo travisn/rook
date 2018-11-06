@@ -24,7 +24,8 @@ import (
 )
 
 var (
-	ganeshaName string
+	ganeshaName             string
+	ganeshaCopyBinariesPath string
 )
 
 var ganeshaCmd = &cobra.Command{
@@ -45,8 +46,7 @@ var ganeshaRunCmd = &cobra.Command{
 
 func init() {
 	ganeshaRunCmd.Flags().StringVar(&ganeshaName, "ganesha-name", "", "name of the ganesha server")
-
-	addCopyBinariesFlags(ganeshaConfigCmd)
+	ganeshaConfigCmd.Flags().StringVar(&ganeshaCopyBinariesPath, "copy-binaries-path", "", "If specified, copy the rook binaries to this path for use by the daemon container")
 	addCephFlags(ganeshaConfigCmd)
 
 	ganeshaCmd.AddCommand(ganeshaConfigCmd)
@@ -67,7 +67,7 @@ func configGanesha(cmd *cobra.Command, args []string) error {
 	}
 
 	rook.SetLogLevel()
-	rook.LogStartupInfo(ganeshaCmd.Flags())
+	rook.LogStartupInfo(ganeshaConfigCmd.Flags())
 
 	clusterInfo.Monitors = mon.ParseMonEndpoints(cfg.monEndpoints)
 
@@ -78,7 +78,7 @@ func configGanesha(cmd *cobra.Command, args []string) error {
 	}
 
 	// copy the rook and tini binaries for use by the daemon container
-	copyBinaries()
+	copyBinaries(ganeshaCopyBinariesPath)
 
 	return nil
 }

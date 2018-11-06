@@ -68,10 +68,6 @@ var (
 	copyBinariesPath    string
 )
 
-func addCopyBinariesFlags(command *cobra.Command) {
-	command.Flags().StringVar(&copyBinariesPath, "copy-binaries-path", "", "If specified, copy the rook binaries to this path for use by the daemon container")
-}
-
 func addOSDFlags(command *cobra.Command) {
 	addOSDConfigFlags(osdConfigCmd)
 	addOSDConfigFlags(provisionCmd)
@@ -86,7 +82,9 @@ func addOSDFlags(command *cobra.Command) {
 
 	// flags for generating the osd config
 	osdConfigCmd.Flags().IntVar(&osdID, "osd-id", -1, "osd id for which to generate config")
-	addCopyBinariesFlags(osdConfigCmd)
+
+	// flag for copying the rook binaries for use by a ceph container
+	copyBinariesCmd.Flags().StringVar(&copyBinariesPath, "path", "", "Copy the rook binaries to this path for use by a ceph container")
 
 	// flags for running filestore on a device
 	filestoreDeviceCmd.Flags().StringVar(&mountSourcePath, "source-path", "", "the source path of the device to mount")
@@ -187,7 +185,15 @@ func writeOSDConfig(cmd *cobra.Command, args []string) error {
 		logger.Errorf("failed to write osd config file. %+v", err)
 	}
 
-	copyBinaries()
+	copyBinaries(copyBinariesPath)
+	return nil
+}
+
+func copyRookBinaries(cmd *cobra.Command, args []string) error {
+	if err := flags.VerifyRequiredFlags(copyBinariesCmd, []string{"path"}); err != nil {
+		return err
+	}
+	copyBinaries(copyBinariesPath)
 	return nil
 }
 
@@ -258,9 +264,9 @@ func commonOSDInit(cmd *cobra.Command) {
 	clusterInfo.Monitors = mondaemon.ParseMonEndpoints(cfg.monEndpoints)
 }
 
-func copyBinaries() {
-	if copyBinariesPath != "" {
-		if err := osddaemon.CopyBinariesForDaemon(copyBinariesPath); err != nil {
+func copyBinaries(path string) {
+	if path != "" {
+		if err := osddaemon.CopyBinariesForDaemon(path); err != nil {
 			logger.Errorf("failed to copy rook binaries for daemon container. %+v", err)
 		} else {
 			logger.Infof("successfully copied rook binaries")
