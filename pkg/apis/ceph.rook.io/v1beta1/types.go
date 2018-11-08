@@ -310,23 +310,9 @@ type NFSGaneshaList struct {
 
 // NFSGaneshaSpec represents the spec of an nfs ganesha server
 type NFSGaneshaSpec struct {
-	Store GaneshaStoreSpec `json:"store"`
-
 	ClientRecovery GaneshaClientRecoverySpec `json:"clientRecovery"`
 
-	// The metadata pool settings
 	Server GaneshaServerSpec `json:"server"`
-
-	// The data pool settings
-	Exports []GaneshaExportSpec `json:"exports"`
-}
-
-type GaneshaStoreSpec struct {
-	// Name is the CRD name of the filesystem or objectstore CRD that Ganesha will be exporting
-	Name string `json:"name"`
-
-	// Type is either "file" or "object".
-	Type string `json:"type"`
 }
 
 type GaneshaClientRecoverySpec struct {
@@ -346,32 +332,4 @@ type GaneshaServerSpec struct {
 
 	// Resources set resource requests and limits
 	Resources v1.ResourceRequirements `json:"resources,omitempty"`
-}
-
-type GaneshaExportSpec struct {
-	// PseudoPath is where the export will appear in the NFSv4 pseudoroot namespace.
-	PseudoPath string `json:"pseudoPath"`
-
-	// Path is the directory in the exported file system this export is rooted on
-	Path string `json:"path"`
-
-	// The default access given to clients (ReadOnly, ReadWrite)
-	AccessType string `json:"accessType"`
-
-	// The default policy for squashing the requests. If blank, "No_root_squash" is the default.
-	Squash string `json:"squash"`
-
-	// AllowedClients is the list of allowed client connections
-	AllowedClients []NFSAllowedClient `json:"allowedClients"`
-}
-
-type NFSAllowedClient struct {
-	// Clients is a comma-separated list of clients that are allowed to connect, identified either by IP, IP range, or host name.
-	Clients string `json:"clients"`
-
-	// The access given to clients (ReadOnly, ReadWrite)
-	AccessType string `json:"accessType"`
-
-	// The policy for squashing the requests. If blank, "none" is the default.
-	Squash string `json:"squash"`
 }

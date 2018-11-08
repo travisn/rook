@@ -25,10 +25,6 @@ const (
 )
 
 func getGaneshaConfig(spec cephv1beta1.NFSGaneshaSpec, nodeID string) string {
-	return getCoreConfig(spec, nodeID) + getExportConfig(spec)
-}
-
-func getCoreConfig(spec cephv1beta1.NFSGaneshaSpec, nodeID string) string {
 	return `
 NFS_CORE_PARAM {
 	Enable_NLM = false;
@@ -60,76 +56,4 @@ RADOS_KV {
 	namespace = "` + spec.ClientRecovery.Namespace + `";
 }
 `
-}
-
-func getExportConfig(spec cephv1beta1.NFSGaneshaSpec) string {
-	var config string
-	for _, export := range spec.Exports {
-		config += `
-EXPORT
-{
-	Export_ID=100;
-	Protocols = 4;
-	Transports = TCP;
-	Path = ` + export.Path + `;
-	Pseudo = ` + getPseudoPathWithDefault(export) + `;
-	Squash = ` + getRootSquashWithDefault(export.Squash) + `;
-	Access_Type = ` + convertAccessType(export.AccessType) + `;
-	FSAL {
-		Name = CEPH;
-	}
-` + getAllowedClientConfig(export.AllowedClients) + `
-}
-`
-	}
-	return config
-}
-
-func getAllowedClientConfig(allowedClients []cephv1beta1.NFSAllowedClient) string {
-	var config string
-	for _, client := range allowedClients {
-		config += `
-	CLIENT
-	{
-		Clients = ` + client.Clients + `;
-		Squash = ` + getSquashWithDefault(client.Squash) + `;
-		Access_Type = ` + convertAccessType(client.AccessType) + `;
-	}
- `
-	}
-
-	return config
-}
-
-func getPseudoPathWithDefault(export cephv1beta1.GaneshaExportSpec) string {
-	if export.PseudoPath != "" {
-		return export.PseudoPath
-	}
-	// default to use the same pseudopath as the path
-	return export.Path
-}
-
-func getSquashWithDefault(squash string) string {
-	if squash == "" {
-		// set the default squash to "none"
-		return "None"
-	}
-	return squash
-}
-
-func getRootSquashWithDefault(squash string) string {
-	if squash == "" {
-		// set the default squash for the root
-		return "No_root_squash"
-	}
-	return squash
-}
-
-func convertAccessType(mode string) string {
-	if mode == "ReadOnly" {
-		return "RO"
-	} else if mode == "ReadWrite" {
-		return "RW"
-	}
-	return mode
 }

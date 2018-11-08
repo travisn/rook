@@ -28,6 +28,8 @@ type Interface interface {
 	Clusters() ClusterInformer
 	// Filesystems returns a FilesystemInformer.
 	Filesystems() FilesystemInformer
+	// NFSGaneshas returns a NFSGaneshaInformer.
+	NFSGaneshas() NFSGaneshaInformer
 	// ObjectStores returns a ObjectStoreInformer.
 	ObjectStores() ObjectStoreInformer
 	// ObjectStoreUsers returns a ObjectStoreUserInformer.
@@ -55,6 +57,11 @@ func (v *version) Clusters() ClusterInformer {
 // Filesystems returns a FilesystemInformer.
 func (v *version) Filesystems() FilesystemInformer {
 	return &filesystemInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// NFSGaneshas returns a NFSGaneshaInformer.
+func (v *version) NFSGaneshas() NFSGaneshaInformer {
+	return &nFSGaneshaInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // ObjectStores returns a ObjectStoreInformer.

@@ -21,7 +21,7 @@ package v1beta1
 import (
 	time "time"
 
-	ceph_rook_io_v1beta1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1beta1"
+	cephrookiov1beta1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1beta1"
 	versioned "github.com/rook/rook/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/rook/rook/pkg/client/informers/externalversions/internalinterfaces"
 	v1beta1 "github.com/rook/rook/pkg/client/listers/ceph.rook.io/v1beta1"
@@ -70,7 +70,7 @@ func NewFilteredNFSGaneshaInformer(client versioned.Interface, namespace string,
 				return client.CephV1beta1().NFSGaneshas(namespace).Watch(options)
 			},
 		},
-		&ceph_rook_io_v1beta1.NFSGanesha{},
+		&cephrookiov1beta1.NFSGanesha{},
 		resyncPeriod,
 		indexers,
 	)
@@ -81,7 +81,7 @@ func (f *nFSGaneshaInformer) defaultInformer(client versioned.Interface, resyncP
 }
 
 func (f *nFSGaneshaInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&ceph_rook_io_v1beta1.NFSGanesha{}, f.defaultInformer)
+	return f.factory.InformerFor(&cephrookiov1beta1.NFSGanesha{}, f.defaultInformer)
 }
 
 func (f *nFSGaneshaInformer) Lister() v1beta1.NFSGaneshaLister {
