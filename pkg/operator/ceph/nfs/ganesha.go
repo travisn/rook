@@ -44,6 +44,11 @@ func (c *GaneshaController) createGanesha(n cephv1beta1.NFSGanesha) error {
 			return fmt.Errorf("failed to create config. %+v", err)
 		}
 
+		err = c.addRADOSConfigFile(n, name)
+		if err != nil {
+			return fmt.Errorf("failed to create RADOS config object. %+v", err)
+		}
+
 		// start the deployment
 		deployment := c.makeDeployment(n, name, configName)
 		_, err = c.context.Clientset.ExtensionsV1beta1().Deployments(n.Namespace).Create(deployment)
@@ -68,6 +73,19 @@ func (c *GaneshaController) createGanesha(n cephv1beta1.NFSGanesha) error {
 	}
 
 	return nil
+}
+
+// Create empty config file for new ganesha server
+func (c *GaneshaController) addRADOSConfigFile(n cephv1beta1.NFSGanesha, name string) error {
+	nodeID := getGaneshaNodeID(n, name)
+	config := getGaneshaConfigObject(nodeID)
+	err := c.context.Executor.ExecuteCommand(false, "", "rados", "--pool", n.Spec.RADOS.Pool, "--namespace", n.Spec.RADOS.Namespace, "stat", config)
+	if err == nil {
+		// If stat works then we assume it's present already
+		return nil
+	}
+	// try to create it
+	return c.context.Executor.ExecuteCommand(false, "", "rados", "--pool", n.Spec.RADOS.Pool, "--namespace", n.Spec.RADOS.Namespace, "create", config)
 }
 
 func (c *GaneshaController) addServerToDatabase(n cephv1beta1.NFSGanesha, name string) error {

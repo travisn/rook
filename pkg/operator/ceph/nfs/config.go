@@ -29,8 +29,24 @@ func getGaneshaNodeID(n cephv1beta1.NFSGanesha, name string) string {
 	return fmt.Sprintf("%s.%s", n.Name, name)
 }
 
+func getGaneshaConfigObject(nodeID string) string {
+	return fmt.Sprintf("conf-%s", nodeID)
+}
+
+func getRadosURL(n cephv1beta1.NFSGanesha, nodeID string) string {
+	url := fmt.Sprintf("rados://%s/", n.Spec.RADOS.Pool)
+
+	if n.Spec.RADOS.Namespace != "" {
+		url += n.Spec.RADOS.Namespace + "/"
+	}
+
+	url += getGaneshaConfigObject(nodeID)
+	return url
+}
+
 func getGaneshaConfig(n cephv1beta1.NFSGanesha, name string) string {
 	nodeID := getGaneshaNodeID(n, name)
+	url := getRadosURL(n, nodeID)
 	return `
 NFS_CORE_PARAM {
 	Enable_NLM = false;
@@ -61,5 +77,12 @@ RADOS_KV {
 	pool = "` + n.Spec.RADOS.Pool + `";
 	namespace = "` + n.Spec.RADOS.Namespace + `";
 }
+
+RADOS_URLS {
+	ceph_conf = '` + cephConfigPath + `';
+	userid = ` + userID + `;
+}
+
+%url	` + url + `
 `
 }
