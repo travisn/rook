@@ -49,7 +49,7 @@ func (c *GaneshaController) createGanesha(n cephv1beta1.NFSGanesha) error {
 		_, err = c.context.Clientset.ExtensionsV1beta1().Deployments(n.Namespace).Create(deployment)
 		if err != nil {
 			if !errors.IsAlreadyExists(err) {
-				return fmt.Errorf("failed to create mds deployment. %+v", err)
+				return fmt.Errorf("failed to create ganesha deployment. %+v", err)
 			}
 			logger.Infof("ganesha deployment %s already exists", deployment.Name)
 		} else {
@@ -155,7 +155,7 @@ func validateGanesha(context *clusterd.Context, n cephv1beta1.NFSGanesha) error 
 		return fmt.Errorf("missing clientRecovery.pool")
 	}
 	if n.Spec.ClientRecovery.Namespace == "" {
-		return fmt.Errorf("missing clientRecovery.namesapce")
+		return fmt.Errorf("missing clientRecovery.namespace")
 	}
 
 	// Export properties
