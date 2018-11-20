@@ -71,19 +71,21 @@ func (c *GaneshaController) createGanesha(n cephv1beta1.NFSGanesha) error {
 }
 
 func (c *GaneshaController) addServerToDatabase(n cephv1beta1.NFSGanesha, name string) error {
-	logger.Infof("Adding ganesha %s to grace db", name)
-	return c.context.Executor.ExecuteCommand(false, "", "ganesha-rados-grace", "--pool", n.Spec.RADOS.Pool, "--ns", n.Spec.RADOS.Namespace, "add", name)
+	nodeID := getGaneshaNodeID(n, name)
+	logger.Infof("Adding ganesha %s to grace db", nodeID)
+	return c.context.Executor.ExecuteCommand(false, "", "ganesha-rados-grace", "--pool", n.Spec.RADOS.Pool, "--ns", n.Spec.RADOS.Namespace, "add", nodeID)
 }
 
 func (c *GaneshaController) removeServerFromDatabase(n cephv1beta1.NFSGanesha, name string) error {
-	logger.Infof("Removing ganesha %s from grace db", name)
-	return c.context.Executor.ExecuteCommand(false, "", "ganesha-rados-grace", "--pool", n.Spec.RADOS.Pool, "--ns", n.Spec.RADOS.Namespace, "remove", name)
+	nodeID := getGaneshaNodeID(n, name)
+	logger.Infof("Removing ganesha %s from grace db", nodeID)
+	return c.context.Executor.ExecuteCommand(false, "", "ganesha-rados-grace", "--pool", n.Spec.RADOS.Pool, "--ns", n.Spec.RADOS.Namespace, "remove", nodeID)
 }
 
 func (c *GaneshaController) generateConfig(n cephv1beta1.NFSGanesha, name string) (string, error) {
 
 	data := map[string]string{
-		"config": getGaneshaConfig(n.Spec, name),
+		"config": getGaneshaConfig(n, name),
 	}
 	configMap := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{

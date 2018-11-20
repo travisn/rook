@@ -17,6 +17,7 @@ limitations under the License.
 // Package nfs for NFS ganesha
 package nfs
 
+import "fmt"
 import cephv1beta1 "github.com/rook/rook/pkg/apis/ceph.rook.io/v1beta1"
 
 const (
@@ -24,7 +25,12 @@ const (
 	userID         = "admin"
 )
 
-func getGaneshaConfig(spec cephv1beta1.NFSGaneshaSpec, nodeID string) string {
+func getGaneshaNodeID(n cephv1beta1.NFSGanesha, name string) string {
+	return fmt.Sprintf("%s.%s", n.Name, name)
+}
+
+func getGaneshaConfig(n cephv1beta1.NFSGanesha, name string) string {
+	nodeID := getGaneshaNodeID(n, name)
 	return `
 NFS_CORE_PARAM {
 	Enable_NLM = false;
@@ -52,8 +58,8 @@ RADOS_KV {
 	ceph_conf = '` + cephConfigPath + `';
 	userid = ` + userID + `;
 	nodeid = ` + nodeID + `;
-	pool = "` + spec.RADOS.Pool + `";
-	namespace = "` + spec.RADOS.Namespace + `";
+	pool = "` + n.Spec.RADOS.Pool + `";
+	namespace = "` + n.Spec.RADOS.Namespace + `";
 }
 `
 }
