@@ -310,12 +310,12 @@ type NFSGaneshaList struct {
 
 // NFSGaneshaSpec represents the spec of an nfs ganesha server
 type NFSGaneshaSpec struct {
-	ClientRecovery GaneshaClientRecoverySpec `json:"clientRecovery"`
+	RADOS GaneshaRADOSSpec `json:"RADOS"`
 
 	Server GaneshaServerSpec `json:"server"`
 }
 
-type GaneshaClientRecoverySpec struct {
+type GaneshaRADOSSpec struct {
 	// Pool is the RADOS pool where NFS client recovery data is stored.
 	Pool string `json:"pool"`
 

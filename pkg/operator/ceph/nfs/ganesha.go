@@ -72,12 +72,12 @@ func (c *GaneshaController) createGanesha(n cephv1beta1.NFSGanesha) error {
 
 func (c *GaneshaController) addServerToDatabase(n cephv1beta1.NFSGanesha, name string) error {
 	logger.Infof("Adding ganesha %s to grace db", name)
-	return c.context.Executor.ExecuteCommand(false, "", "ganesha-rados-grace", "--pool", n.Spec.ClientRecovery.Pool, "--ns", n.Spec.ClientRecovery.Namespace, "add", name)
+	return c.context.Executor.ExecuteCommand(false, "", "ganesha-rados-grace", "--pool", n.Spec.RADOS.Pool, "--ns", n.Spec.RADOS.Namespace, "add", name)
 }
 
 func (c *GaneshaController) removeServerFromDatabase(n cephv1beta1.NFSGanesha, name string) error {
 	logger.Infof("Removing ganesha %s from grace db", name)
-	return c.context.Executor.ExecuteCommand(false, "", "ganesha-rados-grace", "--pool", n.Spec.ClientRecovery.Pool, "--ns", n.Spec.ClientRecovery.Namespace, "remove", name)
+	return c.context.Executor.ExecuteCommand(false, "", "ganesha-rados-grace", "--pool", n.Spec.RADOS.Pool, "--ns", n.Spec.RADOS.Namespace, "remove", name)
 }
 
 func (c *GaneshaController) generateConfig(n cephv1beta1.NFSGanesha, name string) (string, error) {
@@ -143,11 +143,11 @@ func validateGanesha(context *clusterd.Context, n cephv1beta1.NFSGanesha) error 
 	}
 
 	// Client recovery properties
-	if n.Spec.ClientRecovery.Pool == "" {
-		return fmt.Errorf("missing clientRecovery.pool")
+	if n.Spec.RADOS.Pool == "" {
+		return fmt.Errorf("missing RADOS.pool")
 	}
-	if n.Spec.ClientRecovery.Namespace == "" {
-		return fmt.Errorf("missing clientRecovery.namespace")
+	if n.Spec.RADOS.Namespace == "" {
+		return fmt.Errorf("missing RADOS.namespace")
 	}
 
 	// Ganesha server properties

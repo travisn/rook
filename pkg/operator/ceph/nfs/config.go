@@ -52,8 +52,8 @@ RADOS_KV {
 	ceph_conf = '` + cephConfigPath + `';
 	userid = ` + userID + `;
 	nodeid = ` + nodeID + `;
-	pool = "` + spec.ClientRecovery.Pool + `";
-	namespace = "` + spec.ClientRecovery.Namespace + `";
+	pool = "` + spec.RADOS.Pool + `";
+	namespace = "` + spec.RADOS.Namespace + `";
 }
 `
 }
