@@ -50,6 +50,7 @@ spec:
     #    operator: Exists
     #  podAffinity:
     #  podAntiAffinity:
+    #  topologySpreadConstraints:
     # The requests and limits set here allow the ganesha pod(s) to use half of one CPU core and 1 gigabyte of memory
     resources:
     #  limits:

@@ -50,6 +50,7 @@ spec:
     #    operator: Exists
     #  podAffinity:
     #  podAntiAffinity:
+    #  topologySpreadConstraints:
     # A key/value list of annotations
     annotations:
     #  key: value

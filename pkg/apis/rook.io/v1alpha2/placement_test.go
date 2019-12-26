@@ -22,6 +22,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestPlacement_spec(t *testing.T) {
@@ -34,6 +35,13 @@ nodeAffinity:
         operator: In
         values:
           - bar
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: zone
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        foo: bar
 tolerations:
   - key: foo
     operator: Exists`)
@@ -64,6 +72,16 @@ tolerations:
 				},
 			},
 		},
+		TopologySpreadConstraints: []v1.TopologySpreadConstraint{
+			{
+				MaxSkew:           1,
+				TopologyKey:       "zone",
+				WhenUnsatisfiable: "DoNotSchedule",
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{"foo": "bar"},
+				},
+			},
+		},
 		Tolerations: []v1.Toleration{
 			{
 				Key:      "foo",
@@ -77,32 +95,49 @@ tolerations:
 func TestPlacement_ApplyToPodSpec(t *testing.T) {
 	to := placementTestGetTolerations("foo", "bar")
 	na := placementTestGenerateNodeAffinity()
-	expected := &v1.PodSpec{Affinity: &v1.Affinity{NodeAffinity: na}, Tolerations: to}
+	tc := placementTestGetTopologySpreadConstraints("zone")
+	expected := &v1.PodSpec{
+		Affinity:                  &v1.Affinity{NodeAffinity: na},
+		Tolerations:               to,
+		TopologySpreadConstraints: tc,
+	}
 
 	var p Placement
 	var ps *v1.PodSpec
 
-	p = Placement{NodeAffinity: na, Tolerations: to}
+	p = Placement{NodeAffinity: na, Tolerations: to, TopologySpreadConstraints: tc}
 	ps = &v1.PodSpec{}
 	p.ApplyToPodSpec(ps)
 	assert.Equal(t, expected, ps)
 
-	// partial update
+	// partial updates
+	p = Placement{NodeAffinity: na, Tolerations: to}
+	ps = &v1.PodSpec{TopologySpreadConstraints: tc}
+	p.ApplyToPodSpec(ps)
+	assert.Equal(t, expected, ps)
+
 	p = Placement{NodeAffinity: na}
-	ps = &v1.PodSpec{Tolerations: to}
+	ps = &v1.PodSpec{Tolerations: to, TopologySpreadConstraints: tc}
 	p.ApplyToPodSpec(ps)
 	assert.Equal(t, expected, ps)
 
 	// overridden attributes
-	p = Placement{NodeAffinity: na, Tolerations: to}
-	ps = &v1.PodSpec{Tolerations: placementTestGetTolerations("bar", "baz")}
+	p = Placement{NodeAffinity: na, Tolerations: to, TopologySpreadConstraints: tc}
+	ps = &v1.PodSpec{
+		Tolerations:               placementTestGetTolerations("bar", "baz"),
+		TopologySpreadConstraints: placementTestGetTopologySpreadConstraints("rack"),
+	}
 	p.ApplyToPodSpec(ps)
 	assert.Equal(t, expected, ps)
 
 	p = Placement{NodeAffinity: na}
 	nap := placementTestGenerateNodeAffinity()
 	nap.PreferredDuringSchedulingIgnoredDuringExecution[0].Weight = 5
-	ps = &v1.PodSpec{Affinity: &v1.Affinity{NodeAffinity: nap}, Tolerations: to}
+	ps = &v1.PodSpec{
+		Affinity:                  &v1.Affinity{NodeAffinity: nap},
+		Tolerations:               to,
+		TopologySpreadConstraints: tc,
+	}
 	p.ApplyToPodSpec(ps)
 	assert.Equal(t, expected, ps)
 }
@@ -110,12 +145,21 @@ func TestPlacement_ApplyToPodSpec(t *testing.T) {
 func TestPlacement_Merge(t *testing.T) {
 	to := placementTestGetTolerations("foo", "bar")
 	na := placementTestGenerateNodeAffinity()
+	tc := placementTestGetTopologySpreadConstraints("zone")
 
 	var original, with, expected, merged Placement
 
 	original = Placement{}
-	with = Placement{Tolerations: to}
-	expected = Placement{Tolerations: to}
+	with = Placement{
+		NodeAffinity:              na,
+		Tolerations:               to,
+		TopologySpreadConstraints: tc,
+	}
+	expected = Placement{
+		NodeAffinity:              na,
+		Tolerations:               to,
+		TopologySpreadConstraints: tc,
+	}
 	merged = original.Merge(with)
 	assert.Equal(t, expected, merged)
 
@@ -125,9 +169,20 @@ func TestPlacement_Merge(t *testing.T) {
 	merged = original.Merge(with)
 	assert.Equal(t, expected, merged)
 
-	original = Placement{Tolerations: placementTestGetTolerations("bar", "baz")}
-	with = Placement{NodeAffinity: na, Tolerations: to}
-	expected = Placement{NodeAffinity: na, Tolerations: to}
+	original = Placement{
+		Tolerations:               placementTestGetTolerations("bar", "baz"),
+		TopologySpreadConstraints: placementTestGetTopologySpreadConstraints("rack"),
+	}
+	with = Placement{
+		NodeAffinity:              na,
+		Tolerations:               to,
+		TopologySpreadConstraints: tc,
+	}
+	expected = Placement{
+		NodeAffinity:              na,
+		Tolerations:               to,
+		TopologySpreadConstraints: tc,
+	}
 	merged = original.Merge(with)
 	assert.Equal(t, expected, merged)
 }
@@ -141,6 +196,19 @@ func placementTestGetTolerations(key, value string) []v1.Toleration {
 			Value:             value,
 			Effect:            v1.TaintEffectNoSchedule,
 			TolerationSeconds: &ts,
+		},
+	}
+}
+
+func placementTestGetTopologySpreadConstraints(topologyKey string) []v1.TopologySpreadConstraint {
+	return []v1.TopologySpreadConstraint{
+		{
+			MaxSkew:           1,
+			TopologyKey:       topologyKey,
+			WhenUnsatisfiable: "DoNotSchedule",
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"foo": "bar"},
+			},
 		},
 	}
 }
