@@ -170,6 +170,9 @@ func NodeMeetsPlacementTerms(node v1.Node, placement rookalpha.Placement, ignore
 	if !NodeIsTolerable(node, placement.Tolerations, ignoreWellKnownTaints) {
 		return false, nil
 	}
+	if !NodeHasTopologyKey(node, placement.TopologySpreadConstraints) {
+		return false, nil
+	}
 	return true, nil
 }
 
@@ -213,6 +216,24 @@ func NodeIsTolerable(node v1.Node, tolerations []v1.Toleration, ignoreWellKnownT
 		}
 	}
 	return true
+}
+
+// NodeHasTopologyKeys returns true if the node has the specified topology label.
+// If `whenUnsatisfiable` is `ScheduleAnyWay`, the constraint is ignored.
+func NodeHasTopologyKey(node v1.Node, constraints []v1.TopologySpreadConstraint) bool {
+	if len(constraints) == 0 {
+		return true
+	}
+
+	for _, c := range constraints {
+		if c.WhenUnsatisfiable == v1.ScheduleAnyway {
+			return true
+		}
+		if _, ok := node.ObjectMeta.Labels[c.TopologyKey]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 // NodeIsReady returns true if the node is ready. It returns false if the node is not ready.
