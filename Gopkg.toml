@@ -145,9 +145,8 @@ ignored = [
 
 # external bucket provisioner library
 [[constraint]]
-  branch = "k8s-1.16"
+  branch = "master"
   name = "github.com/kube-object-storage/lib-bucket-provisioner"
-  source = "github.com/travisn/lib-bucket-provisioner.git"
 
 [[override]]
   name = "github.com/openshift/machine-api-operator"
@@ -157,3 +156,7 @@ ignored = [
   name = "github.com/rook/operator-kit"
   source = "github.com/travisn/operator-kit.git"
   branch = "k8s-1.16-client"
+
+[[override]]
+  name = "github.com/coreos/etcd"
+  revision = "6d8052314b9e01447d1bb2030bd762e0baf2d433"
