@@ -35,7 +35,7 @@ var (
 )
 
 func supportedDeviceType(device string) bool {
-	return device == sys.DiskType || device == sys.SSDType || device == sys.LVMType || device == sys.MultiPath || device == sys.PartType || device == sys.LinearType
+	return device == sys.DiskType || device == sys.SSDType || device == sys.CryptType || device == sys.LVMType || device == sys.MultiPath || device == sys.PartType || device == sys.LinearType
 }
 
 // GetDeviceEmpty check whether a device is completely empty
