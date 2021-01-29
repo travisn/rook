@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: rook-ceph-toolbox-job
+  name: rook-ceph-reset-mon-job
   namespace: rook-ceph # namespace:cluster
   labels:
     app: ceph-toolbox-job
@@ -33,19 +33,91 @@ spec:
       containers:
       - name: script
         image: rook/ceph:master
-        volumeMounts:
-        - mountPath: /etc/ceph
-          name: ceph-config
-          readOnly: true
         command:
         - "bash"
         - "-c"
         - |
           # Modify this script to run any ceph, rbd, radosgw-admin, or other commands that could
           # be run in the toolbox pod. The output of the commands can be seen by getting the pod log.
-          #
-          # example: print the ceph status
-          ceph status
+
+          # Variables to be set more dynamically
+          mon_to_reset=a
+
+          monmap_path=/tmp/monmap
+          ceph-mon \
+            --fsid=$ROOK_CEPH_FSID \
+            --keyring=/etc/ceph/keyring-store/keyring \
+            --log-to-stderr=true \
+            --err-to-stderr=true \
+            --mon-cluster-log-to-stderr=true \
+            --log-stderr-prefix=debug \
+            --default-log-to-file=false \
+            --default-mon-cluster-log-to-file=false \
+            --mon-host=$ROOK_CEPH_MON_HOST \
+            --mon-initial-members=$ROOK_CEPH_MON_INITIAL_MEMBERS \
+            --id=$mon_to_reset \
+            --foreground \
+            --setuser-match-path=/var/lib/ceph/mon/ceph-$mon_to_reset/store.db \
+            --extract-monmap=$monmap_path
+
+          # review the contents of the monmap
+          printf "\n\nORIGINAL MONMAP:\n\n"
+          monmaptool --print $monmap_path
+
+          # remove the other mons from the monmap
+          printf "\n\n REMOVING b and c from the monmap \n\n"
+          monmaptool --rm b $monmap_path
+          monmaptool --rm c $monmap_path
+          printf "Done removing b and c from the monmap \n\n"
+
+          # inject the modified monmap into the good mon, by pasting
+          # the ceph mon command and adding the
+          # `--inject-monmap=${monmap_path}` flag, like this
+          ceph-mon \
+            --fsid=$ROOK_CEPH_FSID \
+            --keyring=/etc/ceph/keyring-store/keyring \
+            --log-to-stderr=true \
+            --err-to-stderr=true \
+            --mon-cluster-log-to-stderr=true \
+            --log-stderr-prefix=debug \
+            --default-log-to-file=false \
+            --default-mon-cluster-log-to-file=false \
+            --mon-host=$ROOK_CEPH_MON_HOST \
+            --mon-initial-members=$ROOK_CEPH_MON_INITIAL_MEMBERS \
+            --id=$mon_to_reset \
+            --foreground \
+            --setuser-match-path=/var/lib/ceph/mon/ceph-$mon_to_reset/store.db \
+            --inject-monmap=$monmap_path
+
+          printf "\n\nFINAL MONMAP:\n\n"
+          monmaptool --print $monmap_path
+        env:
+        - name: ROOK_POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        - name: ROOK_CEPH_MON_HOST
+          valueFrom:
+            secretKeyRef:
+              key: mon_host
+              name: rook-ceph-config
+        - name: ROOK_CEPH_MON_INITIAL_MEMBERS
+          valueFrom:
+            secretKeyRef:
+              key: mon_initial_members
+              name: rook-ceph-config
+        - name: ROOK_CEPH_FSID
+          valueFrom:
+            secretKeyRef:
+              key: fsid
+              name: rook-ceph-mon
+        volumeMounts:
+        - mountPath: /etc/ceph
+          name: ceph-config
+          readOnly: true
+        - mountPath: /var/lib/ceph/mon/ceph-a
+          name: ceph-daemon-data
       volumes:
       - name: mon-endpoint-volume
         configMap:
@@ -53,6 +125,10 @@ spec:
           items:
           - key: data
             path: mon-endpoints
+      - hostPath:
+          path: /var/lib/rook/mon-a/data
+          type: ""
+        name: ceph-daemon-data
       - name: ceph-config
         emptyDir: {}
       restartPolicy: Never
