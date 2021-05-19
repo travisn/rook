@@ -27,6 +27,7 @@ import (
 // ************************************************************************************
 
 type StorageScopeSpec struct {
+	CrimsonEnabled bool `json:"crimsonEnabled"`
 	// +nullable
 	// +optional
 	Nodes []Node `json:"nodes,omitempty"`

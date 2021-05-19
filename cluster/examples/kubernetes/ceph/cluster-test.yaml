@@ -27,7 +27,7 @@ metadata:
 spec:
   dataDirHostPath: /var/lib/rook
   cephVersion:
-    image: ceph/ceph:v16
+    image: quay.ceph.io/ceph-ci/ceph:ad3047651e48270170849032e2f14985afe3cb87-crimson
     allowUnsupported: true
   mon:
     count: 1
@@ -40,6 +40,7 @@ spec:
   crashCollector:
     disable: true
   storage:
+    crimsonEnabled: true
     useAllNodes: true
     useAllDevices: true
     #deviceFilter:

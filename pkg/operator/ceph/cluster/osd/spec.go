@@ -360,8 +360,21 @@ func (c *Cluster) makeDeployment(osdProps osdProperties, osd OSDInfo, provisionC
 
 	var command []string
 	var args []string
-	// If the OSD was prepared with ceph-volume and running on PVC and using the LVM mode
-	if osdProps.onPVC() && osd.CVMode == "lvm" {
+	if c.spec.Storage.CrimsonEnabled {
+		doBinaryCopyInit = false
+		doConfigInit = false
+		command = []string{"crimson-osd"}
+		args = []string{
+			"--foreground",
+			"--id", osdID,
+			"--fsid", c.clusterInfo.FSID,
+			"--setuser", "ceph",
+			"--setgroup", "ceph",
+			fmt.Sprintf("--crush-location=%s", osd.Location),
+		}
+
+	} else if osdProps.onPVC() && osd.CVMode == "lvm" {
+		// If the OSD was prepared with ceph-volume and running on PVC and using the LVM mode
 		// if the osd was provisioned by ceph-volume, we need to launch it with rook as the parent process
 		command = []string{path.Join(rookBinariesMountPath, "tini")}
 		args = []string{
