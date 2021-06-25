@@ -1130,6 +1130,10 @@ type GatewaySpec struct {
 	// +optional
 	// +nullable
 	Service *RGWServiceSpec `json:"service,omitempty"`
+
+	// Whether to enable the core DNS on openshift
+	// +optional
+	EnableCoreDNS bool `json:"enableCoreDNS,omitempty"`
 }
 
 // ZoneSpec represents a Ceph Object Store Gateway Zone specification

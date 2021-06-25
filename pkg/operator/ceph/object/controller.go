@@ -393,6 +393,11 @@ func (r *ReconcileCephObjectStore) reconcileCreateObjectStore(cephObjectStore *c
 			return r.setFailedStatus(namespacedName, "failed to reconcile service", err)
 		}
 
+		err = cfg.reconcileCoreDNS(serviceIP)
+		if err != nil {
+			return r.setFailedStatus(namespacedName, "failed to reconcile core dns", err)
+		}
+
 		// Reconcile Pool Creation
 		if !cephObjectStore.Spec.IsMultisite() {
 			logger.Info("reconciling object store pools")

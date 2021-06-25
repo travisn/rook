@@ -6237,6 +6237,9 @@ spec:
                       nullable: true
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
+                    enableCoreDNS:
+                      description: Whether to enable the core DNS on openshift
+                      type: boolean
                     externalRgwEndpoints:
                       description: ExternalRgwEndpoints points to external rgw endpoint(s)
                       items:
