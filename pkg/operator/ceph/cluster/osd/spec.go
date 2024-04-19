@@ -553,6 +553,7 @@ func (c *Cluster) makeDeployment(osdProps osdProperties, osd OSDInfo, provisionC
 				initContainers = append(initContainers, c.getExpandEncryptedPVCInitContainer(osdDataDirPath, osdProps))
 			}
 			initContainers = append(initContainers, c.getActivatePVCInitContainer(osdProps, osdID))
+			// The expand init container fails for legacy LVM-based OSDs, so only supported expansion for raw mode OSDs
 			initContainers = append(initContainers, c.getExpandPVCInitContainer(osdProps, osdID))
 		}
 	} else {
