@@ -47,11 +47,13 @@ func GetPortFromEndpoint(endpoint string) int32 {
 	if err != nil {
 		logger.Errorf("failed to split host and port for endpoint %q, assuming default Ceph port %q. %v", endpoint, portString, err)
 	} else {
-		port, err = strconv.Atoi(portString) //nolint:gosec // using Atoi to convert type into int is not a real risk
+		//nolint:gosec // using Atoi to convert type into int is not a real risk
+		port, err = strconv.Atoi(portString)
 		if err != nil {
 			logger.Errorf("failed to convert %q to integer. %v", portString, err)
 		}
 	}
-	portInt32 := int32(port) //nolint:gosec G109 -- No overflow: This is just a lower bit to bigger bit conversion
+	//nolint:gosec // G109 No overflow: This is just a lower bit to bigger bit conversion
+	portInt32 := int32(port)
 	return portInt32
 }

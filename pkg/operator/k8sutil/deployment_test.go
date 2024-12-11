@@ -80,9 +80,10 @@ func TestUpdateMultipleDeploymentsAndWait(t *testing.T) {
 		}
 		return appsv1.DeploymentStatus{
 			ObservedGeneration: int64(timesCalled),
-			UpdatedReplicas:    int32(timesCalled), //nolint:gosec G115 // widening cast - no integer overflow
-
-			ReadyReplicas: int32(timesCalled), //nolint:gosec G115 // widening cast - no integer overflow
+			//nolint:gosec // G115 widening cast - no integer overflow
+			UpdatedReplicas: int32(timesCalled),
+			//nolint:gosec // G115 widening cast - no integer overflow
+			ReadyReplicas: int32(timesCalled),
 			Conditions: []appsv1.DeploymentCondition{
 				{Type: appsv1.DeploymentProgressing, Reason: "DoinStuff"},
 			},
@@ -275,9 +276,9 @@ func TestWaitForDeploymentsToUpdate(t *testing.T) {
 		}
 		return appsv1.DeploymentStatus{
 			ObservedGeneration: int64(timesCalled),
-			// nolint:gosec G115 // No overflow: widening cast.
+			// nolint:gosec // G115 No overflow: widening cast.
 			UpdatedReplicas: int32(timesCalled),
-			// nolint:gosec G115 // No overflow: widening cast.
+			// nolint:gosec // G115 No overflow: widening cast.
 			ReadyReplicas: int32(timesCalled),
 			Conditions: []appsv1.DeploymentCondition{
 				{Type: appsv1.DeploymentProgressing, Reason: "DoinStuff"},
