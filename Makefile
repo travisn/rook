@@ -161,6 +161,21 @@ fmt: ## Check formatting of go sources.
 	@$(MAKE) go.init
 	@$(MAKE) go.fmt
 
+
+YAMLS_DIRS ?= $(ROOT_DIR)/deploy/examples $(ROOT_DIR)/.github/workflows
+YAMLLINT_CONF ?= $(ROOT_DIR)/.yamllint
+
+.PHONY: yamllint
+yamllint:
+	@echo ==== yamllint
+	@yamllint -c $(YAMLLINT_CONF) --no-warnings $(YAMLS_DIRS)
+
+.PHONY: pylint
+pylint:
+	@echo === pylint
+	@pylint $(shell find $(ROOT_DIR)  -name '*.py') -E
+
+
 gen.codegen: codegen
 codegen: ${CODE_GENERATOR} ## Run code generators.
 	@build/codegen/codegen.sh
