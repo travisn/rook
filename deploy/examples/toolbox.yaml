@@ -1,8 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rook-ceph-tools
-  namespace: rook-ceph # namespace:cluster
+  name: ceph-custom-toolbox
+  namespace: openshift-storage # namespace:cluster
   labels:
     app: rook-ceph-tools
 spec:
@@ -18,7 +18,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
         - name: rook-ceph-tools
-          image: quay.io/ceph/ceph:v18.2.1
+          image: quay.io/rh-storage-partners/rhceph:7-472.0.hotfix.bz2342729
           command:
             - /bin/bash
             - -c
