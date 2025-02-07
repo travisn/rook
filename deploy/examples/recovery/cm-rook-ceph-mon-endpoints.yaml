@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rook-ceph-mon-endpoints
+  namespace: rook-ceph
+data:
+  data: b=10.105.180.252:6789,c=10.100.247.25:6789,a=10.103.106.98:6789
+  mapping: '{"node":{"a":{"Name":"minikube","Hostname":"minikube","Address":"10.0.2.15"},"b":{"Name":"minikube","Hostname":"minikube","Address":"10.0.2.15"},"c":{"Name":"minikube","Hostname":"minikube","Address":"10.0.2.15"}}}'
