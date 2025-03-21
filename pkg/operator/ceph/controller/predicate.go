@@ -84,8 +84,8 @@ func WatchControllerPredicate() predicate.Funcs {
 				} else if objectToBeDeleted(objOld, objNew) {
 					logger.Debugf("CR %q is going be deleted", objNew.Name)
 					return true
-				} else if objOld.Status != nil && objOld.Status.ObservedGeneration != objNew.GetGeneration() {
-					logger.Infof("CR %q generation is updated vs last observed generation", objNew.Name)
+				} else if len(objOld.GetFinalizers()) == 0 && len(objNew.GetFinalizers()) > 0 {
+					logger.Infof("finalizer added to CR %q, proceeding with reconcile", objNew.Name)
 					return true
 				} else if objOld.GetGeneration() != objNew.GetGeneration() {
 					logger.Debugf("skipping resource %q update with unchanged spec", objNew.Name)
