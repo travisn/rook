@@ -319,7 +319,7 @@ func (r *ReconcileCephObjectStore) reconcile(request reconcile.Request) (reconci
 	// CREATE/UPDATE
 	_, err = r.reconcileCreateObjectStore(cephObjectStore, request.NamespacedName, cephCluster.Spec)
 	if err != nil && kerrors.IsNotFound(err) {
-		logger.Info(opcontroller.OperatorNotInitializedMessage)
+		logger.Errorf("object store reconcile failed. %v", err)
 		return opcontroller.WaitForRequeueIfOperatorNotInitialized, *cephObjectStore, nil
 	} else if err != nil {
 		result, err := r.setFailedStatus(k8sutil.ObservedGenerationNotAvailable, request.NamespacedName, "failed to create object store deployments", err)
