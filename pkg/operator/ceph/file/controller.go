@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"runtime/debug"
 	"strings"
 
 	"github.com/coreos/pkg/capnslog"
@@ -355,7 +356,13 @@ func (r *ReconcileCephFilesystem) reconcile(request reconcile.Request) (reconcil
 		return reconcile.Result{}, *cephFilesystem,
 			errors.Wrapf(err, "invalid object filesystem %q arguments", cephFilesystem.Name)
 	}
-
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Errorf("Panic: %v", r)
+			logger.Errorf("Stack trace:")
+			logger.Errorf("%s", string(debug.Stack()))
+		}
+	}()
 	// RECONCILE
 	logger.Debug("reconciling ceph filesystem store deployments")
 	reconcileResponse, err = r.reconcileCreateFilesystem(cephFilesystem)
