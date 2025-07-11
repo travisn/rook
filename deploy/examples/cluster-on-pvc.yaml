@@ -12,206 +12,186 @@ metadata:
   name: rook-ceph
   namespace: rook-ceph # namespace:cluster
 spec:
-  # If there are multiple clusters, the directory must be unique for each cluster.
   dataDirHostPath: /var/lib/rook
   mon:
-    # Set the number of mons to be started. Generally recommended to be 3.
-    # For highest availability, an odd number of mons should be specified.
     count: 3
-    # The mons should be on unique nodes. For production, at least 3 nodes are recommended for this reason.
-    # Mons should only be allowed on the same node for test environments where data loss is acceptable.
-    allowMultiplePerNode: false
-    # A volume claim template can be specified in which case new monitors (and
-    # monitors created during fail over) will construct a PVC based on the
-    # template for the monitor's primary storage. Changes to the template do not
-    # affect existing monitors. Log data is stored on the HostPath under
-    # dataDirHostPath. If no storage requirement is specified, a default storage
-    # size appropriate for monitor data will be used.
-    volumeClaimTemplate:
+    volumeClaimTemplates:
       spec:
-        storageClassName: gp2-csi
+        storageClassName: ibmc-vpc-block-10iops-tier
         resources:
           requests:
             storage: 10Gi
   cephVersion:
-    image: quay.io/ceph/ceph:v19.2.1
-    allowUnsupported: false
-  skipUpgradeChecks: false
-  continueUpgradeAfterChecksEvenIfNotHealthy: false
-  mgr:
-    count: 2
-    allowMultiplePerNode: false
-    modules:
-      - name: rook
-        enabled: true
-  dashboard:
-    enabled: true
-    ssl: true
-  crashCollector:
-    disable: false
+    #image: registry.redhat.io/rhceph/rhceph-8-rhel9@sha256:f9aee41d14400391965766dd3a8abf544f0303d06c4b6462ac7f1645bfe2db71
+    image: quay.io/brgardne/ceph:19.2.1-222.el9cp
+  cleanupPolicy:
+    sanitizeDisks: {}
+  continueUpgradeAfterChecksEvenIfNotHealthy: true
+  crashCollector: {}
+  csi:
+    cephfs:
+      kernelMountOptions: ms_mode=prefer-crc
+    readAffinity:
+      enabled: true
+    skipUserCreation: true
+  disruptionManagement:
+    machineDisruptionBudgetNamespace: openshift-machine-api
+    managePodBudgets: true
+  labels:
+    exporter:
+      rook.io/managedBy: ocs-storagecluster
+    mgr:
+      odf-resource-profile: ""
+    mon:
+      odf-resource-profile: ""
+    monitoring:
+      rook.io/managedBy: ocs-storagecluster
+    osd:
+      odf-resource-profile: ""
   logCollector:
     enabled: true
-    periodicity: daily # one of: hourly, daily, weekly, monthly
-    maxLogSize: 500M # SUFFIX may be 'M' or 'G'. Must be at least 1M.
+    maxLogSize: 500Mi
+    periodicity: daily
+  cephConfig:
+    global:
+      debug_ms: "1"
+      debug_rgw: "20"
+      mon_max_pg_per_osd: "1000"
+      mon_target_pg_per_osd: "200"
+  mgr:
+    count: 2
+    modules:
+      - enabled: true
+        name: pg_autoscaler
+        settings: {}
+      - enabled: true
+        name: balancer
+        settings: {}
+      - name: rook
+        settings: {}
+  monitoring:
+    enabled: true
+    interval: 30s
+  network:
+    connections:
+      requireMsgr2: true
+    #provider: multus
+    #selectors:
+    #  cluster: openshift-storage/private-net
+    #  public: openshift-storage/public-net
+  placement:
+    all:
+      #nodeAffinity:
+      #  requiredDuringSchedulingIgnoredDuringExecution:
+      #    nodeSelectorTerms:
+      #      - matchExpressions:
+      #          - key: cluster.ocs.openshift.io/openshift-storage
+      #            operator: Exists
+      tolerations:
+        - effect: NoSchedule
+          key: node.ocs.openshift.io/storage
+          operator: Equal
+          value: "true"
+    #arbiter:
+    #  tolerations:
+    #    - effect: NoSchedule
+    #      key: node-role.kubernetes.io/master
+    #      operator: Exists
+    mon:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - rook-ceph-mon
+            topologyKey: kubernetes.io/hostname
+  priorityClassNames:
+    crashcollector: system-node-critical
+    exporter: system-node-critical
+    mgr: system-node-critical
+    mon: system-node-critical
+    osd: system-node-critical
+  #resources:
+  #  crashcollector:
+  #    limits:
+  #      cpu: 100m
+  #      memory: 60Mi
+  #    requests:
+  #      cpu: 100m
+  #      memory: 60Mi
+  #  exporter:
+  #    limits:
+  #      cpu: 50m
+  #      memory: 128Mi
+  #    requests:
+  #      cpu: 50m
+  #      memory: 50Mi
+  #  mgr:
+  #    limits:
+  #      cpu: "2"
+  #      memory: 3Gi
+  #    requests:
+  #      cpu: "1"
+  #      memory: 1536Mi
+  #  mon:
+  #    limits:
+  #      cpu: "1"
+  #      memory: 2Gi
+  #    requests:
+  #      cpu: "1"
+  #      memory: 2Gi
+  security:
+    keyRotation:
+      enabled: false
+      schedule: "@weekly"
   storage:
-    allowDeviceClassUpdate: false # whether to allow changing the device class of an OSD after it is created
-    allowOsdCrushWeightUpdate: true # whether to allow resizing the OSD crush weight after osd pvc is increased
+    allowOsdCrushWeightUpdate: true
+    flappingRestartIntervalHours: 24
     storageClassDeviceSets:
-      - name: set1
-        # The number of OSDs to create from this device set
-        count: 3
-        # IMPORTANT: If volumes specified by the storageClassName are not portable across nodes
-        # this needs to be set to false. For example, if using the local storage provisioner
-        # this should be false.
-        portable: true
-        # Certain storage class in the Cloud are slow
-        # Rook can configure the OSD running on PVC to accommodate that by tuning some of the Ceph internal
-        # Currently, "gp2-csi" has been identified as such
-        tuneDeviceClass: true
-        # Certain storage class in the Cloud are fast
-        # Rook can configure the OSD running on PVC to accommodate that by tuning some of the Ceph internal
-        # Currently, "managed-premium" has been identified as such
-        tuneFastDeviceClass: false
-        # whether to encrypt the deviceSet or not
-        encrypted: false
-        # Since the OSDs could end up on any node, an effort needs to be made to spread the OSDs
-        # across nodes as much as possible. Unfortunately the pod anti-affinity breaks down
-        # as soon as you have more than one OSD per node. The topology spread constraints will
-        # give us an even spread on K8s 1.18 or newer.
+      - count: 3
+        name: ocs-deviceset-ibm-0
         placement:
           topologySpreadConstraints:
-            - maxSkew: 1
-              topologyKey: kubernetes.io/hostname
-              whenUnsatisfiable: ScheduleAnyway
-              labelSelector:
+            - labelSelector:
                 matchExpressions:
                   - key: app
                     operator: In
                     values:
                       - rook-ceph-osd
+              maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: ScheduleAnyway
         preparePlacement:
-          podAntiAffinity:
-            preferredDuringSchedulingIgnoredDuringExecution:
-              - weight: 100
-                podAffinityTerm:
-                  labelSelector:
-                    matchExpressions:
-                      - key: app
-                        operator: In
-                        values:
-                          - rook-ceph-osd
-                      - key: app
-                        operator: In
-                        values:
-                          - rook-ceph-osd-prepare
-                  topologyKey: kubernetes.io/hostname
           topologySpreadConstraints:
-            - maxSkew: 1
-              # IMPORTANT: If you don't have zone labels, change this to another key such as kubernetes.io/hostname
-              topologyKey: topology.kubernetes.io/zone
-              whenUnsatisfiable: DoNotSchedule
-              labelSelector:
+            - labelSelector:
                 matchExpressions:
                   - key: app
                     operator: In
                     values:
+                      - rook-ceph-osd
                       - rook-ceph-osd-prepare
-        resources:
-        # These are the OSD daemon limits. For OSD prepare limits, see the separate section below for "prepareosd" resources
-        #   limits:
-        #     memory: "4Gi"
-        #   requests:
-        #     cpu: "500m"
-        #     memory: "4Gi"
+              maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: ScheduleAnyway
+        #resources:
+        #  limits:
+        #    cpu: "2"
+        #    memory: 5Gi
+        #  requests:
+        #    cpu: "2"
+        #    memory: 5Gi
+        tuneFastDeviceClass: true
         volumeClaimTemplates:
           - metadata:
-              name: data
-              # set a different CRUSH device class on the OSD than the one detected by Ceph
-              # annotations:
-              #   crushDeviceClass: hybrid
+              annotations:
+                crushDeviceClass: ssd
             spec:
+              accessModes:
+                - ReadWriteOnce
               resources:
                 requests:
                   storage: 10Gi
-              # IMPORTANT: Change the storage class depending on your environment
-              storageClassName: gp2-csi
+              storageClassName: ibmc-vpc-block-10iops-tier
               volumeMode: Block
-              accessModes:
-                - ReadWriteOnce
-        # dedicated block device to store bluestore database (block.db)
-        # - metadata:
-        #     name: metadata
-        #   spec:
-        #     resources:
-        #       requests:
-        #         # Find the right size https://docs.ceph.com/docs/master/rados/configuration/bluestore-config-ref/#sizing
-        #         storage: 5Gi
-        #     # IMPORTANT: Change the storage class depending on your environment
-        #     storageClassName: io1
-        #     volumeMode: Block
-        #     accessModes:
-        #       - ReadWriteOnce
-        # dedicated block device to store bluestore wal (block.wal)
-        # - metadata:
-        #     name: wal
-        #   spec:
-        #     resources:
-        #       requests:
-        #         # Find the right size https://docs.ceph.com/docs/master/rados/configuration/bluestore-config-ref/#sizing
-        #         storage: 5Gi
-        #     # IMPORTANT: Change the storage class depending on your environment
-        #     storageClassName: io1
-        #     volumeMode: Block
-        #     accessModes:
-        #       - ReadWriteOnce
-        # Scheduler name for OSD pod placement
-        # schedulerName: osd-scheduler
-    # when onlyApplyOSDPlacement is false, will merge both placement.All() and storageClassDeviceSets.Placement.
-    onlyApplyOSDPlacement: false
-  resources:
-  #  prepareosd:
-  #    requests:
-  #      cpu: "200m"
-  #      memory: "200Mi"
-  priorityClassNames:
-    # If there are multiple nodes available in a failure domain (e.g. zones), the
-    # mons and osds can be portable and set the system-cluster-critical priority class.
-    mon: system-node-critical
-    osd: system-node-critical
-    mgr: system-cluster-critical
-  disruptionManagement:
-    managePodBudgets: true
-    osdMaintenanceTimeout: 30
-  # security oriented settings
-  # security:
-  # Settings to enable key rotation for KEK(Key Encryption Key).
-  # Currently, this is supported only for the default encryption type,
-  # using kubernetes secrets.
-  #   keyRotation:
-  #     enabled: true
-  #     # The schedule, written in [cron format](https://en.wikipedia.org/wiki/Cron),
-  #     # with which key rotation [CronJob](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/)
-  #     # is created. The default value is `"@weekly"`.
-  #     schedule: "@monthly"
-  # To enable the KMS configuration properly don't forget to uncomment the Secret at the end of the file
-  #   kms:
-  #     # name of the config map containing all the kms connection details
-  #     connectionDetails:
-  #        KMS_PROVIDER: "vault"
-  #        VAULT_ADDR: VAULT_ADDR_CHANGE_ME # e,g: https://vault.my-domain.com:8200
-  #        VAULT_BACKEND_PATH: "rook"
-  #        VAULT_SECRET_ENGINE: "kv"
-  #     # name of the secret containing the kms authentication token
-  #     tokenSecretName: rook-vault-token
-# UNCOMMENT THIS TO ENABLE A KMS CONNECTION
-# Also, do not forget to replace both:
-#   * ROOK_TOKEN_CHANGE_ME: with a base64 encoded value of the token to use
-#   * VAULT_ADDR_CHANGE_ME: with the Vault address
-# ---
-# apiVersion: v1
-# kind: Secret
-# metadata:
-#   name: rook-vault-token
-#   namespace: rook-ceph # namespace:cluster
-# data:
-#   token: ROOK_TOKEN_CHANGE_ME

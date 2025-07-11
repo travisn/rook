@@ -6,24 +6,28 @@
 apiVersion: ceph.rook.io/v1
 kind: CephObjectStoreUser
 metadata:
-  name: my-user
+  name: noobaa-ceph-objectstore-user
   namespace: rook-ceph # namespace:cluster
 spec:
-  store: my-store
   displayName: "my display name"
-  # Quotas set on the user
-  # quotas:
-  #   maxBuckets: 100
-  #   maxSize: 10G
-  #   maxObjects: 10000
-  # Additional permissions given to the user
-  # capabilities:
-  #   user: "*"
-  #   bucket: "*"
-  #   metadata: "*"
-  #   usage: "*"
-  #   zone: "*"
-  # If the CephObjectStoreUser is created in a namespace other than the Rook cluster namespace,
-  # specify the namespace where the cluster and object store are found.
-  # "allowUsersInNamespaces" must include this namespace to enable this feature.
-  # clusterNamespace: rook-ceph
+  store: ocs-storagecluster-cephobjectstore
+---
+apiVersion: ceph.rook.io/v1
+kind: CephObjectStoreUser
+metadata:
+  name: ocs-storagecluster-cephobjectstoreuser
+  namespace: rook-ceph # namespace:cluster
+spec:
+  displayName: "ocs-storagecluster"
+  store: ocs-storagecluster-cephobjectstore
+---
+apiVersion: ceph.rook.io/v1
+kind: CephObjectStoreUser
+metadata:
+  name: prometheus-user
+  namespace: rook-ceph # namespace:cluster
+spec:
+  capabilities:
+    user: read
+  displayName: prometheus-user
+  store: ocs-storagecluster-cephobjectstore
