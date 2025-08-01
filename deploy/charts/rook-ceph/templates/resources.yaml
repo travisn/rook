@@ -3811,6 +3811,12 @@ spec:
                             the mirror peer token.
                             Rotation will affect any existing peers connected to this cluster, so take care when exercising this option.
                           properties:
+                            createMirrorKey:
+                              description: |-
+                                CreateMirrorKey indicates whether the `client.rbd-mirror-peer` cephx key should be created.
+                                If nil, the default is to create the key.
+                                If false, the key will not be created and will be deleted if it exists.
+                              type: boolean
                             keyGeneration:
                               description: |-
                                 KeyGeneration specifies the desired CephX key generation. This is used when KeyRotationPolicy

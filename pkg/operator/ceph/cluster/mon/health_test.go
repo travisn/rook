@@ -67,7 +67,7 @@ func TestCheckHealth(t *testing.T) {
 		Spec: cephv1.ClusterSpec{
 			Security: cephv1.ClusterSecuritySpec{
 				CephX: cephv1.ClusterCephxConfig{
-					RBDMirrorPeer: cephv1.CephxConfig{},
+					RBDMirrorPeer: cephv1.RbdMirrorCephxConfig{},
 				},
 			},
 		},
@@ -300,7 +300,7 @@ func TestEvictMonOnSameNode(t *testing.T) {
 		Spec: cephv1.ClusterSpec{
 			Security: cephv1.ClusterSecuritySpec{
 				CephX: cephv1.ClusterCephxConfig{
-					RBDMirrorPeer: cephv1.CephxConfig{},
+					RBDMirrorPeer: cephv1.RbdMirrorCephxConfig{},
 				},
 			},
 		},

@@ -841,9 +841,8 @@ func (c *Cluster) removeMonWithOptionalQuorum(daemonName string, shouldRemoveFro
 	}
 
 	// Update cluster-wide RBD bootstrap peer token since Monitors have changed
-	_, err := controller.CreateBootstrapPeerSecret(c.context, c.ClusterInfo, &cephv1.CephCluster{ObjectMeta: metav1.ObjectMeta{Name: c.ClusterInfo.NamespacedName().Name, Namespace: c.Namespace}}, c.ownerInfo)
-	if err != nil {
-		return errors.Wrap(err, "failed to update cluster rbd bootstrap peer token")
+	if err := c.ConfigureClusterPeerSecret(); err != nil {
+		return errors.Wrap(err, "failed to configure cluster peer secret")
 	}
 
 	// When the mon is removed from quorum, it is possible that the operator will be restarted

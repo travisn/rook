@@ -131,6 +131,25 @@ func CreateBootstrapPeerSecret(ctx *clusterd.Context, clusterInfo *cephclient.Cl
 	return reconcile.Result{}, nil
 }
 
+func DeleteBootstrapPeerSecret(context *clusterd.Context, clusterInfo *cephclient.ClusterInfo) error {
+	if err := cephclient.DeleteRBDMirrorBootstrapPeer(context, clusterInfo); err != nil {
+		return errors.Wrapf(err, "failed to delete rbd-mirror bootstrap peer")
+	}
+	// Delete Secret
+	logger.Info("deleting the bootstrap peer secret if it exists")
+	secretName := buildBootstrapPeerSecretName(&cephv1.CephCluster{ObjectMeta: metav1.ObjectMeta{Name: clusterInfo.NamespacedName().Name, Namespace: clusterInfo.Namespace}})
+	ownerRef := metav1.OwnerReference{
+		APIVersion: "ceph.rook.io/v1",
+		Kind:       "CephCluster",
+		Name:       clusterInfo.NamespacedName().Name,
+	}
+	err := k8sutil.DeleteSecretIfOwnedBy(clusterInfo.Context, context.Clientset, secretName, clusterInfo.Namespace, ownerRef)
+	if err != nil && !kerrors.IsAlreadyExists(err) {
+		return errors.Wrapf(err, "failed to delete mirroring peer secret %q", secretName)
+	}
+	return nil
+}
+
 // GenerateBootstrapPeerSecret generates a Kubernetes Secret for the mirror bootstrap peer token
 func GenerateBootstrapPeerSecret(object client.Object, token []byte) *v1.Secret {
 	var entityType, entityName, entityNamespace string
@@ -249,7 +268,7 @@ func shouldRotateMirrorPeerKeys(c *clusterd.Context, clusterInfo *cephclient.Clu
 	desiredCephVersion := clusterInfo.CephVersion
 	runningCephVersion := clusterInfo.CephVersion
 
-	shouldRotateKeys, err := keyring.ShouldRotateCephxKeys(cephObj.Spec.Security.CephX.RBDMirrorPeer, runningCephVersion, desiredCephVersion, *cephObj.Status.Cephx.RBDMirrorPeer)
+	shouldRotateKeys, err := keyring.ShouldRotateCephxKeys(cephObj.Spec.Security.CephX.RBDMirrorPeer.CephxConfig, runningCephVersion, desiredCephVersion, *cephObj.Status.Cephx.RBDMirrorPeer)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to check if mirror peer keys should be rotated or not")
 	}
@@ -264,7 +283,7 @@ func UpdateMirrorCephxStatus(c *clusterd.Context, clusterInfo *cephclient.Cluste
 		if err := c.Client.Get(clusterInfo.Context, clusterInfo.NamespacedName(), cluster); err != nil {
 			return errors.Wrapf(err, "failed to get cluster %v to update the conditions.", clusterInfo.NamespacedName())
 		}
-		updatedStatus := keyring.UpdatedCephxStatus(didRotate, cluster.Spec.Security.CephX.RBDMirrorPeer, clusterInfo.CephVersion, *cluster.Status.Cephx.RBDMirrorPeer)
+		updatedStatus := keyring.UpdatedCephxStatus(didRotate, cluster.Spec.Security.CephX.RBDMirrorPeer.CephxConfig, clusterInfo.CephVersion, *cluster.Status.Cephx.RBDMirrorPeer)
 		cluster.Status.Cephx.RBDMirrorPeer = &updatedStatus
 		logger.Debugf("updating rbd-mirror cephx status to %+v", cluster.Status.Cephx.RBDMirrorPeer)
 		if err := reporting.UpdateStatus(c.Client, cluster); err != nil {

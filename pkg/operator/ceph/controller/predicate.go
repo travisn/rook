@@ -196,8 +196,10 @@ func WatchPredicateForNonCRDObject[T client.Object](owner runtime.Object, scheme
 			objectName := object.GetName()
 			if match {
 				// If the resource is a CM, we might want to ignore it since some of them are ephemeral
-				isCMToIgnoreOnDelete := isCMToIgnoreOnDelete(e.Object)
-				if isCMToIgnoreOnDelete {
+				if isCMToIgnoreOnDelete(e.Object) {
+					return false
+				}
+				if isSecretToIgnoreOnDelete(e.Object) {
 					return false
 				}
 
@@ -412,6 +414,18 @@ func isCMToIgnoreOnDelete(obj runtime.Object) bool {
 		return true
 	}
 
+	return false
+}
+
+func isSecretToIgnoreOnDelete(obj runtime.Object) bool {
+	secret, ok := obj.(*corev1.Secret)
+	if !ok {
+		return false
+	}
+
+	if strings.HasPrefix(secret.Name, clusterMirrorBootstrapPeerSecretName) {
+		return true
+	}
 	return false
 }
 

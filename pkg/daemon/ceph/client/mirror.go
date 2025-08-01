@@ -517,3 +517,14 @@ func CreateRBDMirrorBootstrapPeerWithoutPool(context *clusterd.Context, clusterI
 	// Return the base64 encoded token
 	return []byte(base64.StdEncoding.EncodeToString(decodedTokenBackToJSON)), nil
 }
+
+func DeleteRBDMirrorBootstrapPeer(context *clusterd.Context, clusterInfo *ClusterInfo) error {
+	fullClientName := getQualifiedUser(rbdMirrorPeerKeyringID)
+	logger.Infof("delete rbd-mirror bootstrap peer token %q", fullClientName)
+	err := AuthDelete(context, clusterInfo, fullClientName)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create rbd-mirror peer key %q", fullClientName)
+	}
+	logger.Infof("successfully deleted rbd-mirror bootstrap peer token for cluster %q", clusterInfo.NamespacedName().Name)
+	return nil
+}

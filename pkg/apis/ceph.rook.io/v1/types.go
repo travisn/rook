@@ -334,7 +334,7 @@ type ClusterCephxConfig struct {
 	// bootstrap peer token used connect peer clusters. Rotating the `rbd-mirror-peer` user key will update
 	// the mirror peer token.
 	// Rotation will affect any existing peers connected to this cluster, so take care when exercising this option.
-	RBDMirrorPeer CephxConfig `json:"rbdMirrorPeer,omitempty"`
+	RBDMirrorPeer RbdMirrorCephxConfig `json:"rbdMirrorPeer,omitempty"`
 
 	// CSI configures CephX key rotation settings for the Ceph-CSI daemons in the current Kubernetes cluster.
 	// CSI key rotation can affect existing PV connections, so take care when exercising this option.
@@ -357,6 +357,15 @@ type CephXConfigWithPriorCount struct {
 	KeepPriorKeyCountMax uint8 `json:"keepPriorKeyCountMax,omitempty"`
 }
 
+type RbdMirrorCephxConfig struct {
+	CephxConfig `json:",inline"` // inline core CephxConfig
+
+	// CreateMirrorKey indicates whether the `client.rbd-mirror-peer` cephx key should be created.
+	// If nil, the default is to create the key.
+	// If false, the key will not be created and will be deleted if it exists.
+	// +optional
+	CreateMirrorKey *bool `json:"createMirrorKey,omitempty"`
+}
 type CephxConfig struct {
 	// KeyRotationPolicy controls if and when CephX keys are rotated after initial creation.
 	// One of Disabled, or KeyGeneration. Default Disabled.

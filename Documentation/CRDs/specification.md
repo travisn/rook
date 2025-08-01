@@ -4636,7 +4636,7 @@ not necessarily a reflection of PriorKeyCount config here.</p>
 <h3 id="ceph.rook.io/v1.CephxConfig">CephxConfig
 </h3>
 <p>
-(<em>Appears on:</em><a href="#ceph.rook.io/v1.CephXConfigWithPriorCount">CephXConfigWithPriorCount</a>, <a href="#ceph.rook.io/v1.ClientSecuritySpec">ClientSecuritySpec</a>, <a href="#ceph.rook.io/v1.ClusterCephxConfig">ClusterCephxConfig</a>)
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.CephXConfigWithPriorCount">CephXConfigWithPriorCount</a>, <a href="#ceph.rook.io/v1.ClientSecuritySpec">ClientSecuritySpec</a>, <a href="#ceph.rook.io/v1.ClusterCephxConfig">ClusterCephxConfig</a>, <a href="#ceph.rook.io/v1.RbdMirrorCephxConfig">RbdMirrorCephxConfig</a>)
 </p>
 <div>
 </div>
@@ -5028,8 +5028,8 @@ Ceph cluster. Daemon CephX keys can be rotated without affecting client connecti
 <td>
 <code>rbdMirrorPeer</code><br/>
 <em>
-<a href="#ceph.rook.io/v1.CephxConfig">
-CephxConfig
+<a href="#ceph.rook.io/v1.RbdMirrorCephxConfig">
+RbdMirrorCephxConfig
 </a>
 </em>
 </td>
@@ -12899,6 +12899,52 @@ RadosNamespaceMirroringMode
 <td><p>RadosNamespaceMirroringModePool represents the pool mode</p>
 </td>
 </tr></tbody>
+</table>
+<h3 id="ceph.rook.io/v1.RbdMirrorCephxConfig">RbdMirrorCephxConfig
+</h3>
+<p>
+(<em>Appears on:</em><a href="#ceph.rook.io/v1.ClusterCephxConfig">ClusterCephxConfig</a>)
+</p>
+<div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>CephxConfig</code><br/>
+<em>
+<a href="#ceph.rook.io/v1.CephxConfig">
+CephxConfig
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>CephxConfig</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>createMirrorKey</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CreateMirrorKey indicates whether the <code>client.rbd-mirror-peer</code> cephx key should be created.
+If nil, the default is to create the key.
+If false, the key will not be created and will be deleted if it exists.</p>
+</td>
+</tr>
+</tbody>
 </table>
 <h3 id="ceph.rook.io/v1.ReadAffinitySpec">ReadAffinitySpec
 </h3>
