@@ -59,7 +59,7 @@ const (
 var (
 	rbdMirrorPeerCaps                     = []string{"mon", "profile rbd-mirror-peer", "osd", "profile rbd"}
 	rbdMirrorPeerKeyringID                = "rbd-mirror-peer"
-	radosNamespaceMirroringMinimumVersion = cephver.CephVersion{Major: 20, Minor: 0, Extra: 0}
+	radosNamespaceMirroringMinimumVersion = cephver.CephVersion{Major: 19, Minor: 2, Extra: 0} // Modified for downstream
 )
 
 // ImportRBDMirrorBootstrapPeer add a mirror peer in the rbd-mirror configuration
@@ -138,7 +138,7 @@ func CreateRBDMirrorBootstrapPeer(context *clusterd.Context, clusterInfo *Cluste
 func enablePoolMirroring(context *clusterd.Context, clusterInfo *ClusterInfo, pool cephv1.NamedPoolSpec) error {
 	logger.Infof("enabling mirroring type %q for pool %q", pool.Mirroring.Mode, pool.Name)
 
-	if pool.Mirroring.Mode == mirrorModeInitOnly && !clusterInfo.CephVersion.IsAtLeastTentacle() {
+	if pool.Mirroring.Mode == mirrorModeInitOnly && !clusterInfo.CephVersion.IsAtLeast(cephver.CephVersion{Major: 19, Minor: 2, Extra: 1}) {
 		return fmt.Errorf("ceph version %q does not support mirroring mode %s, minimum ceph version required is %q", clusterInfo.CephVersion.String(), pool.Mirroring.Mode, cephver.Tentacle.String())
 	}
 
@@ -147,8 +147,8 @@ func enablePoolMirroring(context *clusterd.Context, clusterInfo *ClusterInfo, po
 		return errors.Wrapf(err, "failed to get mirroring info for the pool %q", pool.Name)
 	}
 
-	if pool.Mirroring.Mode == mirrorInfo.Mode {
-		logger.Debugf("mirroring is already enabled on the pool %s with mode %s", pool.Name, mirrorInfo.Mode)
+	if mirrorInfo.Mode != "" && mirrorInfo.Mode != "disabled" && pool.Mirroring.Mode != mirrorInfo.Mode {
+		logger.Errorf("mirroring is already enabled on the pool %s with mode %s, Disable and re-enable mirroring to configure to different mode", pool.Name, mirrorInfo.Mode)
 		return nil
 	}
 

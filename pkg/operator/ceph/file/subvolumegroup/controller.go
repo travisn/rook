@@ -272,7 +272,7 @@ func (r *ReconcileCephFilesystemSubVolumeGroup) reconcile(request reconcile.Requ
 			return reconcile.Result{}, errors.Wrap(err, "failed to save cluster config")
 		}
 		r.updateStatus(observedGeneration, namespacedName, cephv1.ConditionReady)
-		if csi.EnableCSIOperator() {
+		if true {
 			err = csi.CreateUpdateClientProfileSubVolumeGroup(r.clusterInfo.Context, r.client, r.clusterInfo, cephFilesystemSubVolumeGroupName, buildClusterID(cephFilesystemSubVolumeGroup))
 			if err != nil {
 				return reconcile.Result{}, errors.Wrap(err, "failed to create ceph csi-op config CR for subvolume")

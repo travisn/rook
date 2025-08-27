@@ -176,7 +176,7 @@ func (c *ClusterController) configureExternalCephCluster(cluster *cluster) error
 		}
 	}
 
-	if csi.EnableCSIOperator() {
+	if true {
 		logger.Info("create cephConnection and defaultClientProfile for external mode")
 		err = csi.CreateUpdateCephConnection(c.context.Client, cluster.ClusterInfo, *cluster.Spec)
 		if err != nil {

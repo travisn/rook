@@ -1675,29 +1675,29 @@ func TestRgwReadAffinity(t *testing.T) {
 		isCrushLocationArgSet bool
 	}{
 		{
-			name:                  "ceph version is less than v.20",
+			name:                  "ceph version is less than v.19",
 			cephVersion:           cephver.CephVersion{Major: 17, Minor: 2, Extra: 3},
 			readAffinity:          "localize",
 			isReadAffinityArgSet:  false,
 			isCrushLocationArgSet: false,
 		},
 		{
-			name:                  "ceph version is v.20 and localized read affinity is set",
-			cephVersion:           cephver.CephVersion{Major: 20, Minor: 0, Extra: 0},
+			name:                  "ceph version is v.19 and localized read affinity is set",
+			cephVersion:           cephver.CephVersion{Major: 19, Minor: 0, Extra: 0},
 			readAffinity:          "localize",
 			isReadAffinityArgSet:  true,
 			isCrushLocationArgSet: true,
 		},
 		{
-			name:                  "ceph version is v.20 and balanced read affinity is set",
-			cephVersion:           cephver.CephVersion{Major: 20, Minor: 0, Extra: 0},
+			name:                  "ceph version is v.19 and balanced read affinity is set",
+			cephVersion:           cephver.CephVersion{Major: 19, Minor: 0, Extra: 0},
 			readAffinity:          "balance",
 			isReadAffinityArgSet:  true,
 			isCrushLocationArgSet: false,
 		},
 		{
-			name:                  "ceph version is v.20 and default read affinity is set",
-			cephVersion:           cephver.CephVersion{Major: 20, Minor: 0, Extra: 0},
+			name:                  "ceph version is v.19 and default read affinity is set",
+			cephVersion:           cephver.CephVersion{Major: 19, Minor: 0, Extra: 0},
 			readAffinity:          "default",
 			isReadAffinityArgSet:  true,
 			isCrushLocationArgSet: false,

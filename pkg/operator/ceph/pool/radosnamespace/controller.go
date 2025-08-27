@@ -288,7 +288,7 @@ func (r *ReconcileCephBlockPoolRadosNamespace) reconcile(request reconcile.Reque
 			return reconcile.Result{}, radosNamespace, errors.Wrap(err, "failed to save cluster config")
 		}
 		r.updateStatus(r.client, namespacedName, cephv1.ConditionReady)
-		if csi.EnableCSIOperator() {
+		if true {
 			err = csi.CreateUpdateClientProfileRadosNamespace(r.clusterInfo.Context, r.client, r.clusterInfo, radosNamespaceName, buildClusterID(radosNamespace))
 			if err != nil {
 				return reconcile.Result{}, radosNamespace, errors.Wrap(err, "failed to create ceph csi-op config CR for RadosNamespace")

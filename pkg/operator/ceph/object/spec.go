@@ -515,7 +515,7 @@ func (c *clusterConfig) makeDaemonContainer(rgwConfig *rgwConfig) (v1.Container,
 	// set RGW read Affinity
 	isCrushLocationSet := false
 	if c.store.Spec.Gateway.ReadAffinity != nil {
-		if c.clusterInfo.CephVersion.IsAtLeastTentacle() {
+		if c.clusterInfo.CephVersion.IsAtLeastSquid() {
 			container.Args = append(container.Args, cephconfig.NewFlag(radosReadReplicaPolicy, c.store.Spec.Gateway.ReadAffinity.Type))
 			// set crush location if `balance` and `default` mode are not set.
 			if c.store.Spec.Gateway.ReadAffinity.Type != balanceReadReplicaPolicy && c.store.Spec.Gateway.ReadAffinity.Type != defaultReadReplicaPolicy {
@@ -523,7 +523,7 @@ func (c *clusterConfig) makeDaemonContainer(rgwConfig *rgwConfig) (v1.Container,
 				isCrushLocationSet = true
 			}
 		} else {
-			logger.Warning("can't set RGW read affinity for ceph version below v20 (tentacle)")
+			logger.Warning("can't set RGW read affinity for ceph version below v19 (Squid)")
 		}
 	}
 
