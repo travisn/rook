@@ -42,9 +42,9 @@ jobs:
           debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
-        uses: ./.github/workflows/integration-test-config-latest-k8s
+        uses: ./.github/workflows/integration-test-setup-cluster-resources
         with:
-          kubernetes-version: ${{ matrix.kubernetes-versions }}
+          kubernetes-version: ${{ matrix.kubernetes-version }}
 
       - name: TestCephUpgradeSuite
         run: |
@@ -64,7 +64,7 @@ jobs:
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         if: failure()
         with:
-          name: ceph-upgrade-suite-artifact-${{ matrix.kubernetes-versions }}
+          name: ceph-upgrade-suite-artifact-${{ matrix.kubernetes-version }}
           path: /home/runner/work/rook/rook/tests/integration/_output/tests/
 
   TestHelmUpgradeSuite:
@@ -87,9 +87,9 @@ jobs:
           debug-ci: ${{ contains(github.event.pull_request.labels.*.name, 'debug-ci') }}
 
       - name: setup cluster resources
-        uses: ./.github/workflows/integration-test-config-latest-k8s
+        uses: ./.github/workflows/integration-test-setup-cluster-resources
         with:
-          kubernetes-version: ${{ matrix.kubernetes-versions }}
+          kubernetes-version: ${{ matrix.kubernetes-version }}
 
       - name: TestHelmUpgradeSuite
         run: |
@@ -112,5 +112,5 @@ jobs:
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         if: failure()
         with:
-          name: ceph-upgrade-helm-suite-artifact-${{ matrix.kubernetes-versions }}
+          name: ceph-upgrade-helm-suite-artifact-${{ matrix.kubernetes-version }}
           path: /home/runner/work/rook/rook/tests/integration/_output/tests/
