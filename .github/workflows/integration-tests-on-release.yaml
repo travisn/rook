@@ -29,9 +29,9 @@ jobs:
           fetch-depth: 0
 
       - name: setup cluster resources
-        uses: ./.github/workflows/integration-test-config-latest-k8s
+        uses: ./.github/workflows/integration-test-setup-cluster-resources
         with:
-          kubernetes-version: ${{ matrix.kubernetes-versions }}
+          kubernetes-version: ${{ matrix.kubernetes-version }}
 
       - name: TestCephHelmSuite
         run: |
@@ -53,7 +53,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
         with:
-          name: ceph-helm-suite-artifact-${{ matrix.kubernetes-versions }}
+          name: ceph-helm-suite-artifact-${{ matrix.kubernetes-version }}
           path: /home/runner/work/rook/rook/tests/integration/_output/tests/
 
   TestCephMultiClusterDeploySuite:
@@ -68,10 +68,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: setup latest cluster resources
-        uses: ./.github/workflows/integration-test-config-latest-k8s
+      - name: setup cluster resources
+        uses: ./.github/workflows/integration-test-setup-cluster-resources
         with:
-          kubernetes-version: ${{ matrix.kubernetes-versions }}
+          kubernetes-version: ${{ matrix.kubernetes-version }}
 
       - name: TestCephMultiClusterDeploySuite
         run: |
@@ -94,7 +94,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
         with:
-          name: ceph-multi-cluster-deploy-suite-artifact-${{ matrix.kubernetes-versions }}
+          name: ceph-multi-cluster-deploy-suite-artifact-${{ matrix.kubernetes-version }}
           path: /home/runner/work/rook/rook/tests/integration/_output/tests/
 
   TestCephSmokeSuite:
@@ -109,10 +109,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: setup latest cluster resources
-        uses: ./.github/workflows/integration-test-config-latest-k8s
+      - name: setup cluster resources
+        uses: ./.github/workflows/integration-test-setup-cluster-resources
         with:
-          kubernetes-version: ${{ matrix.kubernetes-versions }}
+          kubernetes-version: ${{ matrix.kubernetes-version }}
 
       - name: TestCephSmokeSuite
         run: |
@@ -132,7 +132,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
         with:
-          name: ceph-smoke-suite-artifact-${{ matrix.kubernetes-versions }}
+          name: ceph-smoke-suite-artifact-${{ matrix.kubernetes-version }}
           path: /home/runner/work/rook/rook/tests/integration/_output/tests/
 
   TestCephUpgradeSuite:
@@ -147,10 +147,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: setup latest cluster resources
-        uses: ./.github/workflows/integration-test-config-latest-k8s
+      - name: setup cluster resources
+        uses: ./.github/workflows/integration-test-setup-cluster-resources
         with:
-          kubernetes-version: ${{ matrix.kubernetes-versions }}
+          kubernetes-version: ${{ matrix.kubernetes-version }}
 
       - name: TestCephUpgradeSuite
         run: |
@@ -170,7 +170,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
         with:
-          name: ceph-upgrade-suite-artifact-${{ matrix.kubernetes-versions }}
+          name: ceph-upgrade-suite-artifact-${{ matrix.kubernetes-version }}
           path: /home/runner/work/rook/rook/tests/integration/_output/tests/
 
   TestHelmUpgradeSuite:
@@ -186,9 +186,9 @@ jobs:
           fetch-depth: 0
 
       - name: setup cluster resources
-        uses: ./.github/workflows/integration-test-config-latest-k8s
+        uses: ./.github/workflows/integration-test-setup-cluster-resources
         with:
-          kubernetes-version: ${{ matrix.kubernetes-versions }}
+          kubernetes-version: ${{ matrix.kubernetes-version }}
 
       - name: TestHelmUpgradeSuite
         run: |
@@ -211,7 +211,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
         with:
-          name: ceph-upgrade-suite-artifact-${{ matrix.kubernetes-versions }}
+          name: ceph-upgrade-suite-artifact-${{ matrix.kubernetes-version }}
           path: /home/runner/work/rook/rook/tests/integration/_output/tests/
 
   TestCephObjectSuite:
@@ -226,10 +226,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: setup latest cluster resources
-        uses: ./.github/workflows/integration-test-config-latest-k8s
+      - name: setup cluster resources
+        uses: ./.github/workflows/integration-test-setup-cluster-resources
         with:
-          kubernetes-version: ${{ matrix.kubernetes-versions }}
+          kubernetes-version: ${{ matrix.kubernetes-version }}
 
       - name: TestCephObjectSuite
         run: |
@@ -249,5 +249,5 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
         with:
-          name: ceph-object-suite-artifact-${{ matrix.kubernetes-versions }}
+          name: ceph-object-suite-artifact-${{ matrix.kubernetes-version }}
           path: /home/runner/work/rook/rook/tests/integration/_output/tests/
