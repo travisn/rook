@@ -16,32 +16,12 @@ Both use cases are supported, allowing you to choose the appropriate access meth
 
 ## Prerequisites
 
-This guide assumes a Rook cluster as explained in the [Quickstart](../../Getting-Started/quickstart.md).
+This guide assumes a Rook cluster as explained in the [Quickstart Guide](../../Getting-Started/quickstart.md).
 
 ### Requirements
 
 - **Ceph Version**: Ceph v20 (Tentacle) or later with NVMe-oF gateway support
-- **Rook Version**: Rook v1.19.0 or later
-- **Ceph CSI Driver**: NVMe-oF-enabled CSI driver (nvmeof.csi.ceph.com)
-- **ServiceAccount**: The `ceph-nvmeof-gateway` ServiceAccount must exist in the namespace where the gateway will be deployed
-
-!!! note
-    For Ceph v20 and above, the NVMe-oF gateway feature is available. Ensure your Ceph cluster is running a compatible version before proceeding.
-
-## Architecture Overview
-
-The NVMe-oF implementation separates concerns between infrastructure management and storage provisioning:
-
-- **Rook Operator**: Manages NVMe-oF gateway pod lifecycle, scaling, and health monitoring
-- **Ceph CSI Driver**: Handles dynamic provisioning, subsystem creation, and NVMe namespace management
-- **NVMe-oF Gateways**: Serve NVMe-oF protocol and manage RBD backend connections
-
-When a PVC is created using the NVMe-oF storage class:
-1. The CSI driver creates an RBD image in the specified pool
-2. The CSI driver creates an NVMe subsystem and namespace on the gateway
-3. The volume can be accessed either:
-   - By Kubernetes pods within the cluster via NVMe-oF protocol
-   - By external clients outside the cluster using standard NVMe-oF initiators
+- For more background and design details, see the [NVMe-oF gateway design doc](../../../design/ceph/ceph-nvmeof-gateway.md).
 
 ## Step 1: Create a Ceph Block Pool
 
@@ -174,9 +154,12 @@ kubectl get pods -n rook-ceph -l app=rook-ceph-nvmeof -o wide
     rook-ceph-nvmeof-my-nvmeof-0-7c785ff5f6-6wxrj   1/1     Running   0          5m    10.244.0.16   minikube
     ```
 
-Note the pod's:
-- **IP address** (e.g., `10.244.0.16`) - this will be used as the listener address
-- **Hostname** (e.g., `rook-ceph-nvmeof-my-nvmeof-0-7c785ff5f6-6wxrj`) - this will be used as the listener hostname
+The pod name/IP shown here are useful for troubleshooting, but they are **not stable** and can change when the pod is rescheduled.
+
+For the StorageClass `listeners` entries, use stable values:
+
+- **listener hostname**: the gateway **instance name** `rook-ceph-nvmeof-<CephNVMeOFGateway name>-<instance index>` (example: `rook-ceph-nvmeof-my-nvmeof-0`)
+- **listener address**: a **stable, routable address** for that gateway instance (for in-cluster usage this can be the per-instance Service DNS/ClusterIP; for external usage expose the Service via `LoadBalancer`/`NodePort` and use that reachable address)
 
 ### Check the ConfigMap
 
@@ -190,276 +173,14 @@ The ConfigMap contains the gateway configuration that will be used by the gatewa
 
 The NVMe-oF CSI driver handles dynamic provisioning of volumes. You need to deploy the CSI provisioner with the NVMe-oF driver.
 
-### Create ServiceAccount and RBAC
-
-First, create the ServiceAccount and required RBAC permissions:
-
-```yaml
----
-kind: ServiceAccount
-apiVersion: v1
-metadata:
-  name: nvmeof-csi-provisioner
-  namespace: rook-ceph
----
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: nvmeof-external-provisioner-runner
-rules:
-  - apiGroups: [""]
-    resources: ["nodes"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["events"]
-    verbs: ["list", "watch", "create", "update", "patch"]
-  - apiGroups: [""]
-    resources: ["persistentvolumes"]
-    verbs: ["get", "list", "watch", "create", "update", "delete", "patch"]
-  - apiGroups: [""]
-    resources: ["persistentvolumeclaims"]
-    verbs: ["get", "list", "watch", "update"]
-  - apiGroups: [""]
-    resources: ["persistentvolumeclaims/status"]
-    verbs: ["update", "patch"]
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["storageclasses"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["snapshot.storage.k8s.io"]
-    resources: ["volumesnapshots"]
-    verbs: ["get", "list", "watch", "update", "patch", "create"]
-  - apiGroups: ["snapshot.storage.k8s.io"]
-    resources: ["volumesnapshots/status"]
-    verbs: ["get", "list", "patch"]
-  - apiGroups: ["snapshot.storage.k8s.io"]
-    resources: ["volumesnapshotcontents"]
-    verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
-  - apiGroups: ["snapshot.storage.k8s.io"]
-    resources: ["volumesnapshotclasses"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["volumeattachments"]
-    verbs: ["get", "list", "watch", "update", "patch"]
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["volumeattachments/status"]
-    verbs: ["patch"]
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["csinodes"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["get"]
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: nvmeof-csi-provisioner-role
-subjects:
-  - kind: ServiceAccount
-    name: nvmeof-csi-provisioner
-    namespace: rook-ceph
-roleRef:
-  kind: ClusterRole
-  name: nvmeof-external-provisioner-runner
-  apiGroup: rbac.authorization.k8s.io
----
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  namespace: rook-ceph
-  name: nvmeof-external-provisioner-cfg
-rules:
-  - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["get", "list", "watch", "create", "update", "delete"]
-  - apiGroups: ["coordination.k8s.io"]
-    resources: ["leases"]
-    verbs: ["get", "watch", "list", "delete", "update", "create"]
----
-kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: nvmeof-csi-provisioner-role-cfg
-  namespace: rook-ceph
-subjects:
-  - kind: ServiceAccount
-    name: nvmeof-csi-provisioner
-    namespace: rook-ceph
-roleRef:
-  kind: Role
-  name: nvmeof-external-provisioner-cfg
-  apiGroup: rbac.authorization.k8s.io
-```
-
-Apply the RBAC configuration:
+Deploy the NVMe-oF CSI provisioner from the example manifest:
 
 ```console
-kubectl create -f nvmeof-csi-rbac.yaml
-```
-
-### Deploy the CSI Provisioner
-
-Deploy the CSI provisioner with the NVMe-oF driver:
-
-```yaml
----
-kind: Deployment
-apiVersion: apps/v1
-metadata:
-  name: csi-nvmeofplugin-provisioner
-  namespace: rook-ceph
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: csi-nvmeofplugin-provisioner
-  template:
-    metadata:
-      labels:
-        app: csi-nvmeofplugin-provisioner
-    spec:
-      serviceAccountName: nvmeof-csi-provisioner
-      priorityClassName: system-cluster-critical
-      containers:
-        - name: csi-nvmeofplugin
-          image: quay.io/ceph/cephcsi:canary  # Use appropriate version
-          command: ["/usr/local/bin/cephcsi"]
-          args:
-            - "--nodeid=$(NODE_ID)"
-            - "--type=nvmeof"
-            - "--controllerserver=true"
-            - "--endpoint=$(CSI_ENDPOINT)"
-            - "--v=5"
-            - "--drivername=nvmeof.csi.ceph.com"
-            - "--pidlimit=-1"
-            - "--rbdhardmaxclonedepth=8"
-            - "--rbdsoftmaxclonedepth=4"
-            - "--enableprofiling=false"
-            - "--setmetadata=true"
-          env:
-            - name: POD_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
-            - name: NODE_ID
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-            - name: POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: CSI_ENDPOINT
-              value: unix:///csi/csi-provisioner.sock
-          imagePullPolicy: "IfNotPresent"
-          securityContext:
-            privileged: true
-            capabilities:
-              drop:
-                - ALL
-          volumeMounts:
-            - name: socket-dir
-              mountPath: /csi
-            - name: ceph-csi-config
-              mountPath: /etc/ceph-csi-config/
-            - name: keys-tmp-dir
-              mountPath: /tmp/csi/keys
-        - name: csi-provisioner
-          image: registry.k8s.io/sig-storage/csi-provisioner:v5.1.0
-          args:
-            - "--csi-address=$(ADDRESS)"
-            - "--v=1"
-            - "--timeout=150s"
-            - "--retry-interval-start=500ms"
-            - "--leader-election=true"
-            - "--feature-gates=HonorPVReclaimPolicy=true"
-            - "--prevent-volume-mode-conversion=true"
-            - "--default-fstype=ext4"
-            - "--extra-create-metadata=true"
-            - "--immediate-topology=false"
-            - "--http-endpoint=$(POD_IP):8090"
-          env:
-            - name: ADDRESS
-              value: unix:///csi/csi-provisioner.sock
-            - name: POD_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
-          imagePullPolicy: "IfNotPresent"
-          ports:
-            - containerPort: 8090
-              name: provisioner
-              protocol: TCP
-          volumeMounts:
-            - name: socket-dir
-              mountPath: /csi
-        - name: csi-attacher
-          image: registry.k8s.io/sig-storage/csi-attacher:v4.8.0
-          args:
-            - "--v=1"
-            - "--csi-address=$(ADDRESS)"
-            - "--leader-election=true"
-            - "--retry-interval-start=500ms"
-            - "--default-fstype=ext4"
-            - "--http-endpoint=$(POD_IP):8093"
-          env:
-            - name: ADDRESS
-              value: /csi/csi-provisioner.sock
-            - name: POD_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
-          imagePullPolicy: "IfNotPresent"
-          ports:
-            - containerPort: 8093
-              name: attacher
-              protocol: TCP
-          volumeMounts:
-            - name: socket-dir
-              mountPath: /csi
-        - name: csi-resizer
-          image: registry.k8s.io/sig-storage/csi-resizer:v1.12.0
-          args:
-            - "--csi-address=$(ADDRESS)"
-            - "--v=5"
-            - "--leader-election=true"
-            - "--handle-volume-inuse-error=false"
-            - "--feature-gates=VolumeAttributesClass=true"
-          env:
-            - name: ADDRESS
-              value: unix:///csi/csi-provisioner.sock
-          volumeMounts:
-            - name: socket-dir
-              mountPath: /csi
-      volumes:
-        - name: socket-dir
-          emptyDir:
-            medium: "Memory"
-        # Mount rook-ceph-csi-config ConfigMap
-        # This ConfigMap contains the cluster configuration with monitor endpoints
-        # that Ceph-CSI needs to connect to the Ceph cluster
-        - name: ceph-csi-config
-          configMap:
-            name: rook-ceph-csi-config
-            items:
-              - key: csi-cluster-config-json
-                path: config.json
-        - name: keys-tmp-dir
-          emptyDir:
-            medium: "Memory"
+kubectl apply -f deploy/examples/csi/nvmeof/provisioner.yaml
 ```
 
 !!! important
-    The `ceph-csi-config` volume must mount the `rook-ceph-csi-config` ConfigMap, which contains the Ceph cluster configuration. This ConfigMap is automatically created by the Rook operator.
-
-Apply the CSI provisioner:
-
-```console
-kubectl create -f csi-nvmeofplugin-provisioner.yaml
-```
+    The example manifest assumes your Ceph cluster is in the `rook-ceph` namespace and that the Rook operator has created the `rook-ceph-csi-config` ConfigMap. Update the namespace and pin `quay.io/ceph/cephcsi` to an appropriate tag for your environment.
 
 Verify the provisioner is running:
 
@@ -471,9 +192,9 @@ kubectl get deployment -n rook-ceph csi-nvmeofplugin-provisioner
 
 Create a StorageClass that uses the NVMe-oF CSI driver. You'll need to gather the following information from the gateway:
 
-1. **nvmeofGatewayAddress**: The ClusterIP of the gateway service (from Step 3)
+1. **nvmeofGatewayAddress**: A stable address for the gateway management API (the per-instance Service DNS name is recommended)
 2. **nvmeofGatewayPort**: The gateway port (default: 5500)
-3. **listeners**: A JSON array containing listener information for each gateway pod
+3. **listeners**: A JSON array containing listener information for each gateway instance
 
 Based on the gateway pod information from Step 3, create the StorageClass:
 
@@ -487,16 +208,20 @@ parameters:
   pool: nvmeofpool
   subsystemNQN: nqn.2016-06.io.spdk:cnode1.rook-ceph
   # Management API - talks to gateway to create subsystems/namespaces
-  nvmeofGatewayAddress: "10.99.212.218"  # Replace with your gateway service ClusterIP
+  # Prefer the per-instance Service DNS name so you don't need to hardcode an IP.
+  # This resolves from inside the cluster (e.g., from the CSI pods and node plugin pods).
+  nvmeofGatewayAddress: "rook-ceph-nvmeof-my-nvmeof-0.rook-ceph.svc"
   nvmeofGatewayPort: "5500"
   # Data Plane - worker nodes connect here for actual I/O
   # List ALL gateway pods for HA and multipath
   listeners: |
     [
       {
-        "address": "10.244.0.16",
+        # Use the per-instance Service address (ClusterIP/DNS) rather than the pod IP.
+        "address": "10.99.212.218",
         "port": 4420,
-        "hostname": "rook-ceph-nvmeof-my-nvmeof-0-7c785ff5f6-6wxrj"
+        # This must match the gateway instance name (stable), not the random pod name.
+        "hostname": "rook-ceph-nvmeof-my-nvmeof-0"
       }
     ]
   csi.storage.k8s.io/provisioner-secret-name: rook-csi-rbd-provisioner
@@ -513,11 +238,12 @@ allowVolumeExpansion: false
 
 !!! note
     Replace the values in the StorageClass with your actual gateway information:
-    - `nvmeofGatewayAddress`: Use the ClusterIP from `kubectl get service -n rook-ceph rook-ceph-nvmeof-my-nvmeof-0`
-    - `listeners`: Use the pod IP and hostname from `kubectl get pods -n rook-ceph -l app=rook-ceph-nvmeof -o wide`
+    - `nvmeofGatewayAddress`: Prefer the per-instance Service DNS name `rook-ceph-nvmeof-<gateway>-<i>.<namespace>.svc` (or use the Service ClusterIP)
+    - `listeners[].hostname`: Use the gateway instance name `rook-ceph-nvmeof-<gateway>-<i>`
+    - `listeners[].address`: Use an address that NVMe/TCP initiators can reach (for in-cluster this is typically the Service ClusterIP; for external clients, expose the Service and use that reachable address)
 
 !!! tip
-    For high availability with multiple gateway instances, add multiple entries to the `listeners` array, one for each gateway pod.
+    For high availability with multiple gateway instances, add multiple entries to the `listeners` array, one for each gateway instance/service.
 
 Create the StorageClass:
 
@@ -632,8 +358,8 @@ sudo mount /dev/nvmeXnY /mnt/nvmeof
 For production deployments, configure multiple gateway instances for high availability:
 
 1. **Increase Gateway Instances**: Set `instances: 2` or higher in the `CephNVMeOFGateway` spec
-2. **Update StorageClass Listeners**: Add all gateway pod IPs and hostnames to the `listeners` array
-3. **Load Balancing**: The Kubernetes service automatically load-balances connections across gateway instances
+2. **Update StorageClass Listeners**: Add all gateway instance addresses and instance names to the `listeners` array
+3. **Load Balancing**: Each gateway instance has its own Service; list all of them to support multipath/HA
 
 Example with multiple instances:
 
@@ -643,20 +369,20 @@ spec:
   # ... other settings
 ```
 
-Then update the StorageClass `listeners` to include all gateway pods:
+Then update the StorageClass `listeners` to include all gateway instances/services:
 
 ```yaml
 listeners: |
   [
     {
-      "address": "10.244.0.16",
+      "address": "10.99.212.218",
       "port": 4420,
-      "hostname": "rook-ceph-nvmeof-my-nvmeof-0-xxx"
+      "hostname": "rook-ceph-nvmeof-my-nvmeof-0"
     },
     {
-      "address": "10.244.0.17",
+      "address": "10.99.212.219",
       "port": 4420,
-      "hostname": "rook-ceph-nvmeof-my-nvmeof-1-yyy"
+      "hostname": "rook-ceph-nvmeof-my-nvmeof-1"
     }
   ]
 ```
