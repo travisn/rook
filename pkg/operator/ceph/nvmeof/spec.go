@@ -31,6 +31,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -183,6 +184,7 @@ func (r *ReconcileCephNVMeOFGateway) makeDeployment(nvmeof *cephv1.CephNVMeOFGat
 	initContainer := r.createCephConfigInitContainer(nvmeof, daemonID, gatewayConfigMount)
 	daemonContainer := r.daemonContainer(nvmeof, cephConfigMount)
 
+	gatewayName := instanceName(nvmeof, daemonID)
 	podSpec := v1.PodSpec{
 		InitContainers: []v1.Container{
 			initContainer,
@@ -200,6 +202,14 @@ func (r *ReconcileCephNVMeOFGateway) makeDeployment(nvmeof *cephv1.CephNVMeOFGat
 		PriorityClassName:  nvmeof.Spec.PriorityClassName,
 		SecurityContext:    &v1.PodSecurityContext{},
 		ServiceAccountName: serviceAccountName,
+	}
+
+	// Ensure a stable hostname inside the pod (does NOT make the pod IP stable).
+	// This matches the gateway instance name used elsewhere by the operator.
+	if errs := validation.IsDNS1123Label(gatewayName); len(errs) == 0 {
+		podSpec.Hostname = gatewayName
+	} else {
+		logger.Warningf("not setting pod hostname %q (must be a DNS-1123 label): %v", gatewayName, errs)
 	}
 
 	k8sutil.AddUnreachableNodeToleration(&podSpec)
@@ -276,10 +286,6 @@ func (r *ReconcileCephNVMeOFGateway) createCephConfigInitContainer(nvmeof *cephv
 	// DaemonEnvVars already includes StoredMonHostEnvVars() which provides ROOK_CEPH_MON_HOST
 	envVars := controller.DaemonEnvVars(r.cephClusterSpec)
 	envVars = append(envVars,
-		v1.EnvVar{
-			Name:  "POD_NAME",
-			Value: gatewayName,
-		},
 		v1.EnvVar{
 			Name:  "GATEWAY_NAME",
 			Value: gatewayName,
