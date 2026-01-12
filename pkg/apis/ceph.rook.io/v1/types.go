@@ -2792,17 +2792,21 @@ type NVMeOFGatewaySpec struct {
 	Image string `json:"image"`
 
 	// The number of active gateway instances
+	// +kubebuilder:validation:Minimum=1
 	Instances int `json:"instances"`
 
 	// Pool is the RADOS pool where NVMe-oF configuration is stored
+	// +kubebuilder:validation:MinLength=1
 	Pool string `json:"pool"`
 
 	// Group is the gateway group name for high availability (ANA group)
+	// +kubebuilder:validation:MinLength=1
 	Group string `json:"group"`
 
 	// ConfigMapRef is the name of the ConfigMap containing nvmeof.conf configuration
 	// If not specified, a default configuration will be generated
 	// +optional
+	// +kubebuilder:validation:MinLength=1
 	ConfigMapRef string `json:"configMapRef,omitempty"`
 
 	// NVMeOFConfig is a map of section names to key-value pairs for nvmeof.conf configuration

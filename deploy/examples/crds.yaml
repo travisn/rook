@@ -11575,9 +11575,11 @@ spec:
                   description: |-
                     ConfigMapRef is the name of the ConfigMap containing nvmeof.conf configuration
                     If not specified, a default configuration will be generated
+                  minLength: 1
                   type: string
                 group:
                   description: Group is the gateway group name for high availability (ANA group)
+                  minLength: 1
                   type: string
                 hostNetwork:
                   description: Whether host networking is enabled for the gateway. If not set, the network settings from the cluster CR will be applied.
@@ -11590,6 +11592,7 @@ spec:
                   type: string
                 instances:
                   description: The number of active gateway instances
+                  minimum: 1
                   type: integer
                 labels:
                   additionalProperties:
@@ -12263,6 +12266,7 @@ spec:
                   type: object
                 pool:
                   description: Pool is the RADOS pool where NVMe-oF configuration is stored
+                  minLength: 1
                   type: string
                 ports:
                   description: Ports configuration for the NVMe-oF gateway

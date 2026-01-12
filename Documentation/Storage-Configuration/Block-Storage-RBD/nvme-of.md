@@ -21,7 +21,7 @@ This guide assumes a Rook cluster as explained in the [Quickstart Guide](../../G
 ### Requirements
 
 - **Ceph Version**: Ceph v20 (Tentacle) or later with NVMe-oF gateway support
-- For more background and design details, see the [NVMe-oF gateway design doc](../../../design/ceph/ceph-nvmeof-gateway.md).
+- For more background and design details, see the [NVMe-oF gateway design doc](https://github.com/rook/rook/blob/master/design/ceph/ceph-nvmeof-gateway.md).
 
 ## Step 1: Create a Ceph Block Pool
 
@@ -36,14 +36,8 @@ metadata:
 spec:
   failureDomain: osd
   replicated:
-    size: 1
-    # Disallow setting pool with replica 1, this could lead to data loss without recovery.
-    # Make sure you're *ABSOLUTELY CERTAIN* that is what you want
-    # requireSafeReplicaSize: false
+    size: 3
 ```
-
-!!! warning
-    The example above uses `size: 1` for simplicity. In production environments, use at least `size: 3` with `failureDomain: host` for data durability and high availability.
 
 Create the pool:
 
@@ -76,36 +70,7 @@ spec:
   group: mygroup
   # Number of gateway instances to run
   instances: 1
-  # Optional: Custom ConfigMap reference (if not specified, operator will create one)
-  # configMapRef: ""
-  # Optional: Resource requirements for the gateway pods
-  # resources:
-  #   limits:
-  #     cpu: "500m"
-  #     memory: "512Mi"
-  #   requests:
-  #     cpu: "200m"
-  #     memory: "256Mi"
-  # Optional: Priority class name
-  # priorityClassName: ""
-  # Optional: Liveness probe configuration
-  # livenessProbe:
-  #   disabled: false
-  # Optional: Annotations to apply to the deployment
-  # annotations: {}
-  # Optional: Labels to apply to the deployment
-  # labels: {}
-  # Optional: Placement configuration
-  # placement: {}
-  # Optional: Host networking configuration (default: false, uses pod network)
-  # Gateways work better when on pod network and exposed via ingress/service
   hostNetwork: false
-  # Optional: Port configuration (defaults shown below)
-  # ports:
-  #   ioPort: 4420
-  #   gatewayPort: 5500
-  #   monitorPort: 5499
-  #   discoveryPort: 8009
 ```
 
 Apply the gateway configuration:
@@ -120,7 +85,7 @@ Verify the gateway is running:
 kubectl get deployments -n rook-ceph | grep nvmeof
 ```
 
-!!! example "Example Output"
+!!! example "NVMe-oF Service"
     ```console
     NAME                                    READY   UP-TO-DATE   AVAILABLE   AGE
     rook-ceph-nvmeof-my-nvmeof-0           1/1     1            1           2m
@@ -144,50 +109,19 @@ kubectl get service -n rook-ceph rook-ceph-nvmeof-my-nvmeof-0
 
 Note the `CLUSTER-IP` address (e.g., `10.99.212.218`) - you can use this as the `nvmeofGatewayAddress` in the StorageClass, but the per-instance Service DNS name is recommended (stable and you don't have to hardcode an IP).
 
-### Check the Gateway Pod
-
-```console
-kubectl get pods -n rook-ceph -l app=rook-ceph-nvmeof -o wide
-```
-
-!!! example "Example Output"
-    ```console
-    NAME                                            READY   STATUS    RESTARTS   AGE   IP            NODE
-    rook-ceph-nvmeof-my-nvmeof-0-7c785ff5f6-6wxrj   1/1     Running   0          5m    10.244.0.16   minikube
-    ```
-
-The pod name/IP shown here are useful for troubleshooting, but they are **not stable** and can change when the pod is rescheduled.
-
 For the StorageClass `listeners` entries, use stable values:
 
 - **listener hostname**: the gateway **instance name** `rook-ceph-nvmeof-<CephNVMeOFGateway name>-<instance index>` (example: `rook-ceph-nvmeof-my-nvmeof-0`)
 - **listener address**: a **stable, routable address** for that gateway instance (for in-cluster usage this can be the per-instance Service DNS/ClusterIP; for external usage expose the Service via `LoadBalancer`/`NodePort` and use that reachable address)
 
-### Check the ConfigMap
-
-```console
-kubectl get configmap -n rook-ceph rook-ceph-nvmeof-my-nvmeof-0-config -o yaml
-```
-
-The ConfigMap contains the gateway configuration that will be used by the gateway pods.
-
 ## Step 4: Deploy the NVMe-oF CSI Driver
 
-The NVMe-oF CSI driver handles dynamic provisioning of volumes. You need to deploy the CSI provisioner with the NVMe-oF driver.
+The NVMe-oF CSI driver handles dynamic provisioning of volumes. Deploy the CSI provisioner with the NVMe-oF driver.
 
 Deploy the NVMe-oF CSI provisioner from the example manifest:
 
 ```console
 kubectl apply -f deploy/examples/csi/nvmeof/provisioner.yaml
-```
-
-!!! important
-    The example manifest assumes your Ceph cluster is in the `rook-ceph` namespace and that the Rook operator has created the `rook-ceph-csi-config` ConfigMap. Update the namespace and pin `quay.io/ceph/cephcsi` to an appropriate tag for your environment.
-
-Verify the provisioner is running:
-
-```console
-kubectl get deployment -n rook-ceph csi-nvmeofplugin-provisioner
 ```
 
 ## Step 5: Create the StorageClass
@@ -199,6 +133,7 @@ Create a StorageClass that uses the NVMe-oF CSI driver. You'll need to gather th
 3. **listeners**: A JSON array containing listener information for each gateway instance
 
 Based on the gateway pod information from Step 3, create the StorageClass:
+
 
 ```yaml
 apiVersion: storage.k8s.io/v1
@@ -222,7 +157,7 @@ parameters:
         # Use the per-instance Service address (ClusterIP/DNS) rather than the pod IP.
         "address": "10.99.212.218",
         "port": 4420,
-        # This must match the gateway instance name (stable), not the random pod name.
+        # The hostname must match the gateway deployment instance name.
         "hostname": "rook-ceph-nvmeof-my-nvmeof-0"
       }
     ]
@@ -237,15 +172,6 @@ reclaimPolicy: Delete
 volumeBindingMode: Immediate
 allowVolumeExpansion: false
 ```
-
-!!! note
-    Replace the values in the StorageClass with your actual gateway information:
-    - `nvmeofGatewayAddress`: Prefer the per-instance Service DNS name `rook-ceph-nvmeof-<gateway>-<i>.<namespace>.svc` (or use the Service ClusterIP)
-    - `listeners[].hostname`: Use the gateway instance name `rook-ceph-nvmeof-<gateway>-<i>`
-    - `listeners[].address`: Use an address that NVMe/TCP initiators can reach (for in-cluster this is typically the Service ClusterIP; for external clients, expose the Service and use that reachable address)
-
-!!! tip
-    For high availability with multiple gateway instances, add multiple entries to the `listeners` array, one for each gateway instance/service.
 
 Create the StorageClass:
 
@@ -287,7 +213,7 @@ Verify the PVC is bound:
 kubectl get pvc nvmeof-external-volume
 ```
 
-!!! example "Example Output"
+!!! example "NVMe-oF PVC"
     ```console
     NAME                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
     nvmeof-external-volume   Bound    pvc-b4108580-5cfa-46d3-beff-320088a5bf3c   128Mi      RWO            ceph-nvmeof    20m
@@ -329,7 +255,8 @@ nvme connect -t tcp -n <subsystem-nqn> -a <gateway-ip> -s 5500
 ```
 
 Replace:
-- `<subsystem-nqn>` with the NQN from your StorageClass (e.g., `nqn.2016-06.io.spdk:cnode1.rook-ceph`)
+
+- `<subsystem-nqn>` with the `subsystemNQN` value from your StorageClass (e.g., `nqn.2016-06.io.spdk:cnode1.rook-ceph`)
 - `<gateway-ip>` with the gateway service IP or pod IP
 
 #### Access the Volume
@@ -425,6 +352,9 @@ kubectl get configmap -n rook-ceph rook-ceph-csi-config -o yaml
 
 ## Teardown
 
+!!! warning
+    Deleting the PVC will also delete the underlying RBD image and NVMe namespace. Ensure you have backups if needed.
+
 To clean up all the artifacts created:
 
 ```console
@@ -443,9 +373,6 @@ kubectl delete -n rook-ceph cephnvmeofgateway.ceph.rook.io my-nvmeof
 # Delete the block pool (optional)
 kubectl delete -n rook-ceph cephblockpool.ceph.rook.io nvmeofpool
 ```
-
-!!! warning
-    Deleting the PVC will also delete the underlying RBD image and NVMe namespace. Ensure you have backups if needed.
 
 ## References
 
