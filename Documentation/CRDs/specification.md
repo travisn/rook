@@ -4425,10 +4425,8 @@ string
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Image is the container image to use for the NVMe-oF gateway daemon.
-For example, quay.io/ceph/nvmeof:1.5
-If not specified, a default image will be used.</p>
+For example, quay.io/ceph/nvmeof:1.5</p>
 </td>
 </tr>
 <tr>
@@ -10537,10 +10535,8 @@ string
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Image is the container image to use for the NVMe-oF gateway daemon.
-For example, quay.io/ceph/nvmeof:1.5
-If not specified, a default image will be used.</p>
+For example, quay.io/ceph/nvmeof:1.5</p>
 </td>
 </tr>
 <tr>

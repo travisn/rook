@@ -11586,7 +11586,7 @@ spec:
                   description: |-
                     Image is the container image to use for the NVMe-oF gateway daemon.
                     For example, quay.io/ceph/nvmeof:1.5
-                    If not specified, a default image will be used.
+                  minLength: 1
                   type: string
                 instances:
                   description: The number of active gateway instances
@@ -12356,6 +12356,7 @@ spec:
                   type: object
               required:
                 - group
+                - image
                 - instances
                 - pool
               type: object

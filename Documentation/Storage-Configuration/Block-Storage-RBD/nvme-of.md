@@ -68,6 +68,8 @@ metadata:
   name: my-nvmeof
   namespace: rook-ceph
 spec:
+  # Container image for the NVMe-oF gateway daemon
+  image: quay.io/ceph/nvmeof:1.5
   # Pool name that will be used by the NVMe-oF gateway
   pool: nvmeofpool
   # ANA (Asymmetric Namespace Access) group name
@@ -432,11 +434,8 @@ kubectl delete pvc nvmeof-external-volume
 # Delete the StorageClass
 kubectl delete storageclass ceph-nvmeof
 
-# Delete the CSI provisioner
-kubectl delete deployment -n rook-ceph csi-nvmeofplugin-provisioner
-
-# Delete the RBAC resources
-kubectl delete -f nvmeof-csi-rbac.yaml
+# Delete the NVMe-oF CSI provisioner (includes ServiceAccount/RBAC)
+kubectl delete -f deploy/examples/csi/nvmeof/provisioner.yaml
 
 # Delete the NVMe-oF gateway
 kubectl delete -n rook-ceph cephnvmeofgateway.ceph.rook.io my-nvmeof
