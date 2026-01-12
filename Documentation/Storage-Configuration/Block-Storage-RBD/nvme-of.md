@@ -140,7 +140,7 @@ kubectl get service -n rook-ceph rook-ceph-nvmeof-my-nvmeof-0
     rook-ceph-nvmeof-my-nvmeof-0   ClusterIP   10.99.212.218   <none>        4420/TCP,5500/TCP,5499/TCP,8009/TCP   5m
     ```
 
-Note the `CLUSTER-IP` address (e.g., `10.99.212.218`) - this will be used as the `nvmeofGatewayAddress` in the StorageClass.
+Note the `CLUSTER-IP` address (e.g., `10.99.212.218`) - you can use this as the `nvmeofGatewayAddress` in the StorageClass, but the per-instance Service DNS name is recommended (stable and you don't have to hardcode an IP).
 
 ### Check the Gateway Pod
 
