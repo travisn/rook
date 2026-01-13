@@ -2860,7 +2860,7 @@ type NVMeOFGatewayPorts struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	// +optional
-	GatewayPort *int32 `json:"gatewayPort,omitempty"`
+	GatewayPort int32 `json:"gatewayPort,omitempty"`
 
 	// MonitorPort is the port for the monitor service (default: 5499)
 	// +kubebuilder:validation:Minimum=1
