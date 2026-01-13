@@ -54,8 +54,8 @@ func getPorts(nvmeof *cephv1.CephNVMeOFGateway) (ioPort, gatewayPort, monitorPor
 	discoveryPort = nvmeofDiscoveryPort
 
 	if nvmeof.Spec.Ports != nil {
-		if nvmeof.Spec.Ports.IOPort != nil {
-			ioPort = *nvmeof.Spec.Ports.IOPort
+		if nvmeof.Spec.Ports.IOPort != 0 {
+			ioPort = nvmeof.Spec.Ports.IOPort
 		}
 		if nvmeof.Spec.Ports.GatewayPort != nil {
 			gatewayPort = *nvmeof.Spec.Ports.GatewayPort
