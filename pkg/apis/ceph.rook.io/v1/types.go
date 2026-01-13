@@ -2854,7 +2854,7 @@ type NVMeOFGatewayPorts struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	// +optional
-	IOPort *int32 `json:"ioPort,omitempty"`
+	IOPort int32 `json:"ioPort,omitempty"`
 
 	// GatewayPort is the port for the gateway service (default: 5500)
 	// +kubebuilder:validation:Minimum=1
