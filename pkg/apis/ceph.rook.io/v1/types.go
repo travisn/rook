@@ -2866,7 +2866,7 @@ type NVMeOFGatewayPorts struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	// +optional
-	MonitorPort *int32 `json:"monitorPort,omitempty"`
+	MonitorPort int32 `json:"monitorPort,omitempty"`
 
 	// DiscoveryPort is the port for discovery service (default: 8009)
 	// +kubebuilder:validation:Minimum=1
