@@ -34,7 +34,7 @@ metadata:
   name: nvmeofpool
   namespace: rook-ceph
 spec:
-  failureDomain: osd
+  failureDomain: host
   replicated:
     size: 3
 ```
@@ -42,7 +42,7 @@ spec:
 Create the pool:
 
 ```console
-kubectl create -f nvmeof-pool.yaml
+kubectl create -f deploy/examples/csi/nvmeof/nvmeof-pool.yaml
 ```
 
 ## Step 2: Create the NVMe-oF Gateway
@@ -76,7 +76,7 @@ spec:
 Apply the gateway configuration:
 
 ```console
-kubectl create -f nvmeof-gateway.yaml
+kubectl create -f deploy/examples/nvmeof-test.yaml
 ```
 
 Verify the gateway is running:
@@ -98,7 +98,7 @@ Check that the operator has created the necessary resources:
 ### Check the Service
 
 ```console
-kubectl get service -n rook-ceph rook-ceph-nvmeof-my-nvmeof-0
+kubectl get service -n rook-ceph rook-ceph-nvmeof-nvmeof-0
 ```
 
 !!! example "Example Output"
@@ -176,7 +176,7 @@ allowVolumeExpansion: false
 Create the StorageClass:
 
 ```console
-kubectl create -f nvmeof-storageclass.yaml
+kubectl create -f deploy/examples/csi/nvmeof/storageclass.yaml
 ```
 
 ## Step 6: Create a PersistentVolumeClaim

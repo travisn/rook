@@ -1,17 +1,11 @@
-# NVMe-oF CSI provisioner deployment example.
-# This deploys an additional Ceph-CSI controller Deployment configured with --type=nvmeof.
-#
-# Notes:
-# - This assumes the Rook Ceph operator is installed and has created the `rook-ceph-csi-config`
-#   ConfigMap in the same namespace.
-# - Adjust the namespace if your Rook Ceph cluster runs in a different namespace.
-# - Pin the Ceph-CSI image tag to a version appropriate for your environment.
 ---
 kind: ServiceAccount
 apiVersion: v1
 metadata:
   name: nvmeof-csi-provisioner
+  # replace with non-default namespace name
   namespace: rook-ceph
+
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -60,9 +54,40 @@ rules:
   - apiGroups: ["storage.k8s.io"]
     resources: ["csinodes"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshotcontents/status"]
+    verbs: ["update", "patch"]
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["serviceaccounts/token"]
+    verbs: ["create"]
+  - apiGroups: ["groupsnapshot.storage.k8s.io"]
+    resources: ["volumegroupsnapshotclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["groupsnapshot.storage.k8s.io"]
+    resources: ["volumegroupsnapshotcontents"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["groupsnapshot.storage.k8s.io"]
+    resources: ["volumegroupsnapshotcontents/status"]
+    verbs: ["update", "patch"]
+  - apiGroups: ["replication.storage.openshift.io"]
+    resources: ["volumegroupreplicationcontents"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["replication.storage.openshift.io"]
+    resources: ["volumegroupreplicationclasses"]
+    verbs: ["get"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["volumeattributesclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims/status"]
+    verbs: ["patch"]
+    
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -71,6 +96,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: nvmeof-csi-provisioner
+    # replace with non-default namespace name
     namespace: rook-ceph
 roleRef:
   kind: ClusterRole
@@ -80,6 +106,7 @@ roleRef:
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
+  # replace with non-default namespace name
   namespace: rook-ceph
   name: nvmeof-external-provisioner-cfg
 rules:
@@ -94,20 +121,52 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: nvmeof-csi-provisioner-role-cfg
+  # replace with non-default namespace name
   namespace: rook-ceph
 subjects:
   - kind: ServiceAccount
     name: nvmeof-csi-provisioner
+    # replace with non-default namespace name
     namespace: rook-ceph
 roleRef:
   kind: Role
   name: nvmeof-external-provisioner-cfg
   apiGroup: rbac.authorization.k8s.io
+# ---
+# # ssc based on the Ceph-CSI ssc
+# # the "users:" contains a reference to the "rook-ceph" namespace
+# #
+# kind: SecurityContextConstraints
+# apiVersion: security.openshift.io/v1
+# metadata:
+#   name: "ceph-nvmeof-provisioner"
+# # To allow running privilegedContainers
+# allowPrivilegedContainer: true
+# # SYS_ADMIN is needed for rbd to execute rbd map command
+# allowedCapabilities:
+#   - "SYS_ADMIN"
+# # Set to false as we write to RootFilesystem inside container
+# readOnlyRootFilesystem: false
+# requiredDropCapabilities:
+#   - ALL
+# # The type of volumes which are mounted to csi pods
+# volumes:
+#   - configMap
+#   - projected
+#   - emptyDir
+# runAsUser:
+#   type: RunAsAny
+# seLinuxContext:
+#   type: RunAsAny
+# users:
+#   # A user needs to be added for each service account.
+#   - "system:serviceaccount:rook-ceph:nvmeof-csi-provisioner"
 ---
 kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: csi-nvmeofplugin-provisioner
+  # replace with non-default namespace name
   namespace: rook-ceph
 spec:
   replicas: 1
@@ -116,14 +175,28 @@ spec:
       app: csi-nvmeofplugin-provisioner
   template:
     metadata:
+      annotations:
+        openshift.io/scc: rook-ceph-csi
       labels:
         app: csi-nvmeofplugin-provisioner
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - csi-nvmeofplugin-provisioner
+              topologyKey: "kubernetes.io/hostname"
       serviceAccountName: nvmeof-csi-provisioner
       priorityClassName: system-cluster-critical
       containers:
         - name: csi-nvmeofplugin
-          image: quay.io/ceph/cephcsi:canary # Use appropriate version
+          # for stable functionality replace canary with latest release version
+          # image: quay.io/gdidi/cephcsi:nvmeof
+          image: quay.io/cephcsi/cephcsi:canary
           command: ["/usr/local/bin/cephcsi"]
           args:
             - "--nodeid=$(NODE_ID)"
@@ -165,8 +238,12 @@ spec:
               mountPath: /etc/ceph-csi-config/
             - name: keys-tmp-dir
               mountPath: /tmp/csi/keys
+            - name: oidc-token
+              mountPath: /run/secrets/tokens
+              readOnly: true
         - name: csi-provisioner
-          image: registry.k8s.io/sig-storage/csi-provisioner:v5.1.0
+#          image: registry.k8s.io/sig-storage/csi-provisioner:v5.1.0
+          image: quay.io/nixpanic/csi-provisioner:pr1440
           args:
             - "--csi-address=$(ADDRESS)"
             - "--v=1"
@@ -175,6 +252,7 @@ spec:
             - "--leader-election=true"
             - "--feature-gates=HonorPVReclaimPolicy=true"
             - "--prevent-volume-mode-conversion=true"
+            # if fstype is not specified in storageclass, ext4 is default
             - "--default-fstype=ext4"
             - "--extra-create-metadata=true"
             - "--immediate-topology=false"
@@ -219,7 +297,8 @@ spec:
             - name: socket-dir
               mountPath: /csi
         - name: csi-resizer
-          image: registry.k8s.io/sig-storage/csi-resizer:v1.12.0
+          image: quay.io/nixpanic/csi-resizer:pr544
+#          image: registry.k8s.io/sig-storage/csi-resizer:v1.12.0
           args:
             - "--csi-address=$(ADDRESS)"
             - "--v=5"
@@ -236,7 +315,7 @@ spec:
         - name: socket-dir
           emptyDir:
             medium: "Memory"
-        # Mount rook-ceph-csi-config ConfigMap
+        # FIXED: Mount rook-ceph-csi-config instead of rook-ceph-nvmeof-*-config
         # This ConfigMap contains the cluster configuration with monitor endpoints
         # that Ceph-CSI needs to connect to the Ceph cluster
         - name: ceph-csi-config
@@ -248,3 +327,11 @@ spec:
         - name: keys-tmp-dir
           emptyDir:
             medium: "Memory"
+        # Only if nvmeof support encryption
+        - name: oidc-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: oidc-token
+                  expirationSeconds: 3600
+                  audience: ceph-csi-kms

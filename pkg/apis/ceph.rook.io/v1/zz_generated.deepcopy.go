@@ -3888,7 +3888,7 @@ func (in *NVMeOFGatewaySpec) DeepCopyInto(out *NVMeOFGatewaySpec) {
 	if in.Ports != nil {
 		in, out := &in.Ports, &out.Ports
 		*out = new(NVMeOFGatewayPorts)
-		(*in).DeepCopyInto(*out)
+		**out = **in
 	}
 	if in.LivenessProbe != nil {
 		in, out := &in.LivenessProbe, &out.LivenessProbe
