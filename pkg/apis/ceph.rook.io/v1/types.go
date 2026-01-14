@@ -2872,7 +2872,7 @@ type NVMeOFGatewayPorts struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	// +optional
-	DiscoveryPort *int32 `json:"discoveryPort,omitempty"`
+	DiscoveryPort int32 `json:"discoveryPort,omitempty"`
 }
 
 // NFSGaneshaSpec represents the spec of an nfs ganesha server
