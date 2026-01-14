@@ -14,7 +14,7 @@ parameters:
   listeners: |
     [
       {
-        "address": "rook-ceph-nvmeof-nvmeof-0.rook-ceph.svc",
+        "address": "172.30.29.199",
         "port": 4420,
         "hostname": "rook-ceph-nvmeof-nvmeof-0"
       }

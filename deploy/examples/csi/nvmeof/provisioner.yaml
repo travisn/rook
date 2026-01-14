@@ -2,7 +2,7 @@
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: nvmeof-csi-provisioner
+  name: rook-csi-nvmeof-provisioner-sa
   # replace with non-default namespace name
   namespace: rook-ceph
 
@@ -87,7 +87,6 @@ rules:
   - apiGroups: [""]
     resources: ["persistentvolumeclaims/status"]
     verbs: ["patch"]
-    
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -95,7 +94,7 @@ metadata:
   name: nvmeof-csi-provisioner-role
 subjects:
   - kind: ServiceAccount
-    name: nvmeof-csi-provisioner
+    name: rook-csi-nvmeof-provisioner-sa
     # replace with non-default namespace name
     namespace: rook-ceph
 roleRef:
@@ -125,7 +124,7 @@ metadata:
   namespace: rook-ceph
 subjects:
   - kind: ServiceAccount
-    name: nvmeof-csi-provisioner
+    name: rook-csi-nvmeof-provisioner-sa
     # replace with non-default namespace name
     namespace: rook-ceph
 roleRef:
@@ -160,7 +159,7 @@ roleRef:
 #   type: RunAsAny
 # users:
 #   # A user needs to be added for each service account.
-#   - "system:serviceaccount:rook-ceph:nvmeof-csi-provisioner"
+#   - "system:serviceaccount:rook-ceph:rook-csi-nvmeof-provisioner-sa"
 ---
 kind: Deployment
 apiVersion: apps/v1
@@ -190,13 +189,13 @@ spec:
                     values:
                       - csi-nvmeofplugin-provisioner
               topologyKey: "kubernetes.io/hostname"
-      serviceAccountName: nvmeof-csi-provisioner
+      serviceAccountName: rook-csi-nvmeof-provisioner-sa
       priorityClassName: system-cluster-critical
       containers:
         - name: csi-nvmeofplugin
           # for stable functionality replace canary with latest release version
           # image: quay.io/gdidi/cephcsi:nvmeof
-          image: quay.io/cephcsi/cephcsi:canary
+          image: quay.io/cephcsi/cephcsi:v3.16.0
           command: ["/usr/local/bin/cephcsi"]
           args:
             - "--nodeid=$(NODE_ID)"
@@ -242,7 +241,7 @@ spec:
               mountPath: /run/secrets/tokens
               readOnly: true
         - name: csi-provisioner
-#          image: registry.k8s.io/sig-storage/csi-provisioner:v5.1.0
+          #          image: registry.k8s.io/sig-storage/csi-provisioner:v6.0.0
           image: quay.io/nixpanic/csi-provisioner:pr1440
           args:
             - "--csi-address=$(ADDRESS)"
@@ -298,7 +297,7 @@ spec:
               mountPath: /csi
         - name: csi-resizer
           image: quay.io/nixpanic/csi-resizer:pr544
-#          image: registry.k8s.io/sig-storage/csi-resizer:v1.12.0
+          #          image: registry.k8s.io/sig-storage/csi-resizer:v1.12.0
           args:
             - "--csi-address=$(ADDRESS)"
             - "--v=5"

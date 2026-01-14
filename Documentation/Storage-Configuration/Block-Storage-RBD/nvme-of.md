@@ -204,7 +204,7 @@ spec:
 Create the PVC:
 
 ```console
-kubectl create -f nvmeof-pvc.yaml
+kubectl create -f deploy/examples/csi/nvmeof/pvc.yaml
 ```
 
 Verify the PVC is bound:
