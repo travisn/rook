@@ -67,7 +67,7 @@ metadata:
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: ceph-nvmeof-gateway
+  name: rook-ceph-nvmeof
   namespace: {{ .Release.Namespace }} # namespace:cluster
   labels:
     {{- include "library.rook-ceph.labels" . | nindent 4 }}

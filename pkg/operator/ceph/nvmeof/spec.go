@@ -43,7 +43,7 @@ const (
 	nvmeofDiscoveryPort = 8009
 	defaultNVMeOFImage  = "quay.io/ceph/nvmeof:1.5"
 	configKey           = "config"
-	serviceAccountName  = "ceph-nvmeof-gateway"
+	serviceAccountName  = "rook-ceph-nvmeof"
 )
 
 // getPorts returns the configured ports with defaults

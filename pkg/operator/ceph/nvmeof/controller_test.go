@@ -286,7 +286,7 @@ func TestCephNVMeOFGatewayController(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, res.RequeueAfter, time.Duration(0))
 			assertCephNVMeOFGatewayReady(t, r)
-			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-0")
+			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-a")
 		})
 
 		t.Run("double reconcile", func(t *testing.T) {
@@ -294,7 +294,7 @@ func TestCephNVMeOFGatewayController(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, res.RequeueAfter, time.Duration(0))
 			assertCephNVMeOFGatewayReady(t, r)
-			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-0")
+			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-a")
 		})
 	})
 
@@ -310,7 +310,7 @@ func TestCephNVMeOFGatewayController(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, res.RequeueAfter, time.Duration(0))
 			assertCephNVMeOFGatewayReady(t, r)
-			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-0", "rook-ceph-nvmeof-my-nvmeof-1", "rook-ceph-nvmeof-my-nvmeof-2")
+			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-a", "rook-ceph-nvmeof-my-nvmeof-b", "rook-ceph-nvmeof-my-nvmeof-c")
 		})
 
 		t.Run("double reconcile", func(t *testing.T) {
@@ -318,7 +318,7 @@ func TestCephNVMeOFGatewayController(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, res.RequeueAfter, time.Duration(0))
 			assertCephNVMeOFGatewayReady(t, r)
-			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-0", "rook-ceph-nvmeof-my-nvmeof-1", "rook-ceph-nvmeof-my-nvmeof-2")
+			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-a", "rook-ceph-nvmeof-my-nvmeof-b", "rook-ceph-nvmeof-my-nvmeof-c")
 		})
 	})
 
@@ -334,7 +334,7 @@ func TestCephNVMeOFGatewayController(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, res.RequeueAfter, time.Duration(0))
 			assertCephNVMeOFGatewayReady(t, r)
-			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-0", "rook-ceph-nvmeof-my-nvmeof-1", "rook-ceph-nvmeof-my-nvmeof-2")
+			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-a", "rook-ceph-nvmeof-my-nvmeof-b", "rook-ceph-nvmeof-my-nvmeof-c")
 
 			err = cl.Get(ctx, client.ObjectKeyFromObject(nvmeof), nvmeof)
 			assert.NoError(t, err)
@@ -346,7 +346,7 @@ func TestCephNVMeOFGatewayController(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, res.RequeueAfter, time.Duration(0))
 			assertCephNVMeOFGatewayReady(t, r)
-			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-0", "rook-ceph-nvmeof-my-nvmeof-1")
+			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-a", "rook-ceph-nvmeof-my-nvmeof-b")
 		})
 
 		t.Run("scale from 3 to 1 gateway", func(t *testing.T) {
@@ -360,7 +360,7 @@ func TestCephNVMeOFGatewayController(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, res.RequeueAfter, time.Duration(0))
 			assertCephNVMeOFGatewayReady(t, r)
-			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-0", "rook-ceph-nvmeof-my-nvmeof-1", "rook-ceph-nvmeof-my-nvmeof-2")
+			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-a", "rook-ceph-nvmeof-my-nvmeof-b", "rook-ceph-nvmeof-my-nvmeof-c")
 
 			err = cl.Get(ctx, client.ObjectKeyFromObject(nvmeof), nvmeof)
 			assert.NoError(t, err)
@@ -372,7 +372,7 @@ func TestCephNVMeOFGatewayController(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, res.RequeueAfter, time.Duration(0))
 			assertCephNVMeOFGatewayReady(t, r)
-			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-0")
+			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-a")
 		})
 	})
 
@@ -399,7 +399,7 @@ func TestCephNVMeOFGatewayController(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, res.RequeueAfter, time.Duration(0))
 			assertCephNVMeOFGatewayReady(t, r, "my-nvmeof") // first cluster should be ready
-			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-0", "rook-ceph-nvmeof-my-nvmeof-1", "rook-ceph-nvmeof-my-nvmeof-2")
+			assertResourcesExist(t, cCtx, "rook-ceph-nvmeof-my-nvmeof-a", "rook-ceph-nvmeof-my-nvmeof-b", "rook-ceph-nvmeof-my-nvmeof-c")
 		})
 
 		t.Run("reconcile second CephNVMeOFGateway cluster", func(t *testing.T) {
@@ -408,8 +408,8 @@ func TestCephNVMeOFGatewayController(t *testing.T) {
 			assert.Equal(t, res.RequeueAfter, time.Duration(0))
 			assertCephNVMeOFGatewayReady(t, r, "my-nvmeof", "nvmeof2")
 			assertResourcesExist(t, cCtx,
-				"rook-ceph-nvmeof-my-nvmeof-0", "rook-ceph-nvmeof-my-nvmeof-1", "rook-ceph-nvmeof-my-nvmeof-2",
-				"rook-ceph-nvmeof-nvmeof2-0", "rook-ceph-nvmeof-nvmeof2-1",
+				"rook-ceph-nvmeof-my-nvmeof-a", "rook-ceph-nvmeof-my-nvmeof-b", "rook-ceph-nvmeof-my-nvmeof-c",
+				"rook-ceph-nvmeof-nvmeof2-a", "rook-ceph-nvmeof-nvmeof2-b",
 			)
 		})
 
@@ -426,8 +426,8 @@ func TestCephNVMeOFGatewayController(t *testing.T) {
 
 			assertCephNVMeOFGatewayReady(t, r, "my-nvmeof", "nvmeof2")
 			assertResourcesExist(t, cCtx,
-				"rook-ceph-nvmeof-my-nvmeof-0",
-				"rook-ceph-nvmeof-nvmeof2-0", "rook-ceph-nvmeof-nvmeof2-1",
+				"rook-ceph-nvmeof-my-nvmeof-a",
+				"rook-ceph-nvmeof-nvmeof2-a", "rook-ceph-nvmeof-nvmeof2-b",
 			)
 		})
 	})

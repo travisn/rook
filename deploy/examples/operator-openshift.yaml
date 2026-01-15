@@ -49,7 +49,7 @@ users:
   - system:serviceaccount:rook-ceph:rook-ceph-mgr # serviceaccount:namespace:cluster
   - system:serviceaccount:rook-ceph:rook-ceph-osd # serviceaccount:namespace:cluster
   - system:serviceaccount:rook-ceph:rook-ceph-rgw # serviceaccount:namespace:cluster
-  - system:serviceaccount:rook-ceph:ceph-nvmeof-gateway # serviceaccount:namespace:cluster
+  - system:serviceaccount:rook-ceph:rook-ceph-nvmeof # serviceaccount:namespace:cluster
 ---
 # scc for the CSI driver
 kind: SecurityContextConstraints

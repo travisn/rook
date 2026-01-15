@@ -316,7 +316,7 @@ func (r *ReconcileCephNVMeOFGateway) reconcileCreateCephNVMeOFGateway(cephNVMeOF
 
 func (r *ReconcileCephNVMeOFGateway) upCephNVMeOFGateway(cephNVMeOFGateway *cephv1.CephNVMeOFGateway) error {
 	for i := 0; i < cephNVMeOFGateway.Spec.Instances; i++ {
-		daemonID := fmt.Sprintf("%d", i)
+		daemonID := k8sutil.IndexToName(i)
 
 		var configMapName, configHash string
 		var err error
@@ -358,7 +358,7 @@ func (r *ReconcileCephNVMeOFGateway) upCephNVMeOFGateway(cephNVMeOFGateway *ceph
 
 func (r *ReconcileCephNVMeOFGateway) downCephNVMeOFGateway(cephNVMeOFGateway *cephv1.CephNVMeOFGateway, currentCount int) error {
 	for i := cephNVMeOFGateway.Spec.Instances; i < currentCount; i++ {
-		daemonID := fmt.Sprintf("%d", i)
+		daemonID := k8sutil.IndexToName(i)
 		name := instanceName(cephNVMeOFGateway, daemonID)
 
 		err := r.context.Clientset.AppsV1().Deployments(cephNVMeOFGateway.Namespace).Delete(r.opManagerContext, name, metav1.DeleteOptions{})

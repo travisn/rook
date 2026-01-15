@@ -1349,20 +1349,6 @@ subjects:
     name: rook-ceph-system
     namespace: rook-ceph # namespace:operator
 ---
-# Service account for NVMe-oF gateway
-kind: ServiceAccount
-apiVersion: v1
-metadata:
-  name: ceph-nvmeof-gateway
-  namespace: rook-ceph # namespace:cluster
-  labels:
-    operator: rook
-    storage-backend: ceph
-    app.kubernetes.io/name: rook-ceph
-    app.kubernetes.io/part-of: rook-ceph-operator
-# imagePullSecrets:
-#   - name: my-registry-secret
----
 # Service account for Ceph COSI driver
 kind: ServiceAccount
 apiVersion: v1
@@ -1409,6 +1395,20 @@ kind: ServiceAccount
 apiVersion: v1
 metadata:
   name: rook-ceph-mgr
+  namespace: rook-ceph # namespace:cluster
+  labels:
+    operator: rook
+    storage-backend: ceph
+    app.kubernetes.io/name: rook-ceph
+    app.kubernetes.io/part-of: rook-ceph-operator
+# imagePullSecrets:
+#   - name: my-registry-secret
+---
+# Service account for NVMe-oF gateway
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: rook-ceph-nvmeof
   namespace: rook-ceph # namespace:cluster
   labels:
     operator: rook
