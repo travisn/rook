@@ -87,7 +87,7 @@ rules:
   - apiGroups: [""]
     resources: ["persistentvolumeclaims/status"]
     verbs: ["patch"]
-    
+
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -196,7 +196,7 @@ spec:
         - name: csi-nvmeofplugin
           # for stable functionality replace canary with latest release version
           # image: quay.io/gdidi/cephcsi:nvmeof
-          image: quay.io/cephcsi/cephcsi:canary
+          image: quay.io/cephcsi/cephcsi:v3.16.0
           command: ["/usr/local/bin/cephcsi"]
           args:
             - "--nodeid=$(NODE_ID)"
@@ -242,7 +242,7 @@ spec:
               mountPath: /run/secrets/tokens
               readOnly: true
         - name: csi-provisioner
-#          image: registry.k8s.io/sig-storage/csi-provisioner:v5.1.0
+          #          image: registry.k8s.io/sig-storage/csi-provisioner:v5.1.0
           image: quay.io/nixpanic/csi-provisioner:pr1440
           args:
             - "--csi-address=$(ADDRESS)"
@@ -298,7 +298,7 @@ spec:
               mountPath: /csi
         - name: csi-resizer
           image: quay.io/nixpanic/csi-resizer:pr544
-#          image: registry.k8s.io/sig-storage/csi-resizer:v1.12.0
+          #          image: registry.k8s.io/sig-storage/csi-resizer:v1.12.0
           args:
             - "--csi-address=$(ADDRESS)"
             - "--v=5"
