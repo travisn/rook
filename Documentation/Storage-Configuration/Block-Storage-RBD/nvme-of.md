@@ -130,7 +130,7 @@ Create a StorageClass that uses the NVMe-oF CSI driver. You'll need to gather th
 
 !!! note
     The `listeners` JSON array is required temporarily for experimental mode. An improvement is in progress
-    to remove the listeners so it is automatically detected. This removes the current issue of the pod IP
+    to remove the listeners so it is automatically detected. This will fix the issue of the pod IP
     changing and requiring the storage class to be updated.
 
 Updating the IP addresses and host name in the example storage class:

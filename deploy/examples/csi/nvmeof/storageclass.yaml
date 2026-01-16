@@ -7,16 +7,16 @@ parameters:
   pool: nvmeofpool
   subsystemNQN: nqn.2016-06.io.spdk:cnode1.rook-ceph
   # Management API - talks to gateway to create subsystems/namespaces
-  nvmeofGatewayAddress: "172.30.66.88" # ** UPDATE **
+  nvmeofGatewayAddress: "172.30.66.88"
   nvmeofGatewayPort: "5500"
   # Data Plane - worker nodes connect here for actual I/O
   # List ALL gateway pods for HA and multipath
   listeners: |
     [
       {
-        "address": "10.129.2.34", # ** UPDATE **
+        "address": "10.129.2.34",
         "port": 4420,
-        "hostname": "rook-ceph-nvmeof-nvmeof-a" # ** UPDATE **
+        "hostname": "rook-ceph-nvmeof-nvmeof-a"
       }
     ]
   csi.storage.k8s.io/provisioner-secret-name: rook-csi-rbd-provisioner
