@@ -1,0 +1,35 @@
+# Configuration for Ceph Connections
+cephConnections: {}
+clientProfiles:
+  - name: "rook-ceph"
+    cephConnection:
+      # -- Reference to the Ceph connection for this profile (default: "")
+      name: "rook-ceph"
+operatorConfig:
+  name: ceph-csi-operator-config
+  namespace: "rook-ceph"
+  create: true
+  driverSpecDefaults:
+    imageSet:
+      name: "rook-csi-operator-image-set-configmap"
+    # -- Cluster name identifier (default: "")
+    clusterName: "my-cluster" # cluster-name
+drivers:
+  rbd:
+    name: "rook-ceph.rbd.csi.ceph.com" # cluster-namespace
+    enabled: true
+    imageSet:
+      name: "rook-csi-operator-image-set-configmap"
+    clusterName: "my-cluster" # cluster-name
+  nvmeof:
+    name: "rook-ceph.nvmeof.csi.ceph.com" # cluster-namespace
+    enabled: false
+  cephfs:
+    name: "rook-ceph.cephfs.csi.ceph.com" # cluster-namespace
+    enabled: true
+    imageSet:
+      name: "rook-csi-operator-image-set-configmap"
+    clusterName: "my-cluster" # cluster-name
+  nfs:
+    name: "rook-ceph.nfs.csi.ceph.com" # cluster-namespace
+    enabled: false
