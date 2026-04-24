@@ -19,7 +19,7 @@ package cluster
 
 import (
 	"context"
-	"strings"
+	"regexp"
 	"time"
 
 	"github.com/pkg/errors"
@@ -38,6 +38,9 @@ var (
 	operatorAddTaintAnnotationKey              = "ceph.rook.io/pacemaker-fencing-taint"
 	pacemakerEventTriggerObjectKind            = "CronJob"
 	pacemakerEventTriggerObjectName            = "pacemaker-status-collector"
+	// Regular expression to extract node name from pacemaker fencing event message
+	// Expected format: "Fencing event: reboot of <node-name> completed with status ..."
+	pacemakerEventMessageRegex = regexp.MustCompile(`^Fencing event: reboot of (\S+) completed`)
 )
 
 func (c *ClusterController) startGoRoutineForFloatingMon(ctx context.Context, clustr *cluster, clusterObj *cephv1.CephCluster) {
@@ -265,12 +268,12 @@ func getLatestPaceMakerEvent(events []*corev1.Event, nodeName string) (v1.Time, 
 	for _, e := range events {
 		// get the node name from the fencing event message,
 		// the message format is: `Fencing event: reboot of master-1 completed with status success at 2026-01-29 18:08:34.437689Z`
-		parts := strings.Split(e.Message, " ")
-		if len(parts) < 11 {
+		matches := pacemakerEventMessageRegex.FindStringSubmatch(e.Message)
+		if len(matches) < 2 {
 			log.NamespacedWarning("", logger, "unexpected pacemaker fencing event message format: %s", e.Message)
 			return v1.Time{}, errors.New("unexpected pacemaker fencing event message format")
 		}
-		node := parts[4]
+		node := matches[1]
 		if node == nodeName {
 			// use FirstTimestamp to compare the event time, because the event will be updated with the latest timestamp when the event is updated, but the FirstTimestamp will not be updated, it will keep the original event time when the event is created, so we can use FirstTimestamp to compare the event time
 			// ps: we can also use the event fencing time in the event message, but it will require more parsing and error handling, so we choose to use the FirstTimestamp for simplicity
