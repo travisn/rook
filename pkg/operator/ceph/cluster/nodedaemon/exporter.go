@@ -50,9 +50,7 @@ const (
 	exporterKeyName                  = "rook-ceph-exporter-keyring"
 )
 
-var (
-	MinVersionForCephExporter = cephver.CephVersion{Major: 18, Minor: 0, Extra: 0}
-)
+var MinVersionForCephExporter = cephver.CephVersion{Major: 18, Minor: 0, Extra: 0}
 
 // createOrUpdateCephExporter is a wrapper around controllerutil.CreateOrUpdate
 func (r *ReconcileNode) createOrUpdateCephExporter(node corev1.Node, tolerations []corev1.Toleration, cephCluster cephv1.CephCluster, cephVersion *cephver.CephVersion) (controllerutil.OperationResult, error) {
@@ -88,7 +86,6 @@ func (r *ReconcileNode) createOrUpdateCephExporter(node corev1.Node, tolerations
 		keyring.Volume().Exporter())
 
 	mutateFunc := func() error {
-
 		// labels for the pod, the deployment, and the deploymentSelector
 		deploymentLabels := map[string]string{
 			corev1.LabelHostname: nodeHostnameLabel,
@@ -148,6 +145,14 @@ func (r *ReconcileNode) createOrUpdateCephExporter(node corev1.Node, tolerations
 				ServiceAccountName:            k8sutil.DefaultServiceAccount,
 			},
 		}
+
+		// If the log collector is enabled we add the side-car container
+		if cephCluster.Spec.LogCollector.Enabled {
+			shareProcessNamespace := true
+			deploy.Spec.Template.Spec.ShareProcessNamespace = &shareProcessNamespace
+			deploy.Spec.Template.Spec.Containers = append(deploy.Spec.Template.Spec.Containers, *controller.LogCollectorContainer("ceph-client.ceph-exporter", cephCluster.GetNamespace(), cephCluster.Spec))
+		}
+
 		cephv1.GetCephExporterAnnotations(cephCluster.Spec.Annotations).ApplyToObjectMeta(&deploy.Spec.Template.ObjectMeta)
 		applyPrometheusAnnotations(cephCluster, &deploy.Spec.Template.ObjectMeta)
 
